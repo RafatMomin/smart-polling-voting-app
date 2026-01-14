@@ -5,6 +5,8 @@ A full-stack mobile polling and voting application designed to provide a secure,
 ---
 
 ## 📱 Project Overview
+🎥 **App Demo Video:**  
+https://www.youtube.com/watch?v=RlSfbTIuS_M
 
 The **Smart Polling & Voting App** allows users to:
 - Create and participate in polls
