@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SignupActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debug</a> &gt; <a href="index.source.html" class="el_package">com.example.frontendproject</a> &gt; <span class="el_source">SignupActivity.java</span></div><h1>SignupActivity.java</h1><pre class="source lang-java linenums">package com.example.frontendproject;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.util.Log;
+import android.util.Patterns;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.ProgressBar;
+import android.widget.Toast;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.NetworkResponse;
+import com.android.volley.Request;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+import com.example.frontendproject.net.Api;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+/**
+ * SignupActivity handles user registration.
+ *
+ * It collects name, email, and password from the signup form,
+ * validates the inputs, and sends a POST request to the backend.
+ * On success, it navigates the user to OtpVerificationActivity
+ * to complete email verification.
+ */
+
+<span class="fc" id="L36">public class SignupActivity extends AppCompatActivity {</span>
+
+    private static final String TAG = &quot;SignUpActivity&quot;;
+
+    private TextInputEditText etName, etEmail, etPassword;
+    private MaterialButton btnSignup, btnBack;
+    private ProgressBar progress;
+
+    /**
+     * Initializes signup UI, binds all input fields and buttons,
+     * and sets click listeners for signup and back actions.
+     *
+     * @param savedInstanceState previous saved state, if any
+     */
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+<span class="fc" id="L52">        super.onCreate(savedInstanceState);</span>
+        // Make sure your XML file is res/layout/activity_sign_up.xml
+<span class="fc" id="L54">        setContentView(R.layout.activity_sign_up);</span>
+
+        // Bind views
+<span class="fc" id="L57">        etName     = findViewById(R.id.etName);</span>
+<span class="fc" id="L58">        etEmail    = findViewById(R.id.etEmail);</span>
+<span class="fc" id="L59">        etPassword = findViewById(R.id.etPassword);</span>
+<span class="fc" id="L60">        btnSignup  = findViewById(R.id.btnSignup);</span>
+<span class="fc" id="L61">        btnBack    = findViewById(R.id.btnBack);</span>
+<span class="fc" id="L62">        progress   = findViewById(R.id.progress);</span>
+
+<span class="fc" id="L64">        btnSignup.setOnClickListener(v -&gt; {</span>
+<span class="fc" id="L65">            hideKeyboard();</span>
+<span class="fc" id="L66">            doSignUp();</span>
+<span class="fc" id="L67">        });</span>
+
+<span class="fc" id="L69">        btnBack.setOnClickListener(v -&gt; finish());</span>
+<span class="fc" id="L70">    }</span>
+    /**
+     * Reads user inputs, validates them, and sends a POST request to create a new user.
+     * If the backend returns success, redirects to OTP verification screen.
+     */
+    private void doSignUp() {
+<span class="fc" id="L76">        String name     = safeText(etName).trim();</span>
+<span class="fc" id="L77">        String email    = safeText(etEmail).trim();</span>
+<span class="fc" id="L78">        String password = safeText(etPassword);</span>
+
+        // Basic validation
+<span class="fc bfc" id="L81" title="All 2 branches covered.">        if (name.isEmpty()) {</span>
+<span class="fc" id="L82">            toast(&quot;Please enter your full name&quot;);</span>
+<span class="fc" id="L83">            etName.requestFocus();</span>
+<span class="fc" id="L84">            return;</span>
+        }
+<span class="pc bpc" id="L86" title="1 of 4 branches missed.">        if (email.isEmpty() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {</span>
+<span class="fc" id="L87">            toast(&quot;Please enter a valid email&quot;);</span>
+<span class="fc" id="L88">            etEmail.requestFocus();</span>
+<span class="fc" id="L89">            return;</span>
+        }
+<span class="pc bpc" id="L91" title="1 of 2 branches missed.">        if (password.length() &lt; 6) {</span>
+<span class="fc" id="L92">            toast(&quot;Password must be at least 6 characters&quot;);</span>
+<span class="fc" id="L93">            etPassword.requestFocus();</span>
+<span class="fc" id="L94">            return;</span>
+        }
+
+<span class="nc" id="L97">        setLoading(true);</span>
+
+        // Build request body expected by backend: { name, emailId, password }
+<span class="nc" id="L100">        JSONObject body = new JSONObject();</span>
+        try {
+<span class="nc" id="L102">            body.put(&quot;name&quot;, name);</span>
+<span class="nc" id="L103">            body.put(&quot;emailId&quot;, email);   // &lt;-- IMPORTANT: backend expects emailId</span>
+<span class="nc" id="L104">            body.put(&quot;password&quot;, password);</span>
+<span class="nc" id="L105">        } catch (JSONException e) {</span>
+<span class="nc" id="L106">            e.printStackTrace();</span>
+<span class="nc" id="L107">        }</span>
+
+<span class="nc" id="L109">        JsonObjectRequest req = new JsonObjectRequest(</span>
+                Request.Method.POST,
+                Api.CREATE_USER,    // POST http://.../users
+                body,
+                response -&gt; {
+<span class="nc" id="L114">                    setLoading(false);</span>
+                    // backend: { &quot;message&quot;: &quot;success&quot; }  or { &quot;message&quot;: &quot;failure&quot; }
+<span class="nc" id="L116">                    String msg = response.optString(&quot;message&quot;, &quot;&quot;);</span>
+<span class="nc" id="L117">                    Log.d(TAG, &quot;Signup response: &quot; + response.toString());</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">                    if (&quot;success&quot;.equalsIgnoreCase(msg)) {</span>
+<span class="nc" id="L119">                        Toast.makeText(this, &quot;Account created. Check your email for the verification token.&quot;, Toast.LENGTH_LONG).show();</span>
+
+                        // Go to token screen (user pastes token from email)
+<span class="nc" id="L122">                        Intent i = new Intent(this, OtpVerificationActivity.class);</span>
+<span class="nc" id="L123">                        i.putExtra(OtpVerificationActivity.EXTRA_EMAIL, email); // just for display</span>
+<span class="nc" id="L124">                        startActivity(i);</span>
+<span class="nc" id="L125">                    } else {</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">                        Toast.makeText(this, msg.isEmpty() ? &quot;Signup failed&quot; : msg, Toast.LENGTH_SHORT).show();</span>
+                    }
+<span class="nc" id="L128">                },</span>
+                error -&gt; {
+<span class="nc" id="L130">                    setLoading(false);</span>
+<span class="nc" id="L131">                    int status = -1;</span>
+<span class="nc" id="L132">                    String bodyText = &quot;&quot;;</span>
+<span class="nc" id="L133">                    NetworkResponse nr = error.networkResponse;</span>
+<span class="nc bnc" id="L134" title="All 4 branches missed.">                    if (nr != null &amp;&amp; nr.data != null) {</span>
+<span class="nc" id="L135">                        status = nr.statusCode;</span>
+<span class="nc" id="L136">                        bodyText = new String(nr.data);</span>
+                    }
+<span class="nc" id="L138">                    Log.e(TAG, &quot;Volley error. status=&quot; + status + &quot; body=&quot; + bodyText, error);</span>
+<span class="nc" id="L139">                    Toast.makeText(this, &quot;Network error (&quot; + status + &quot;). Check URL/port.&quot;, Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L140">                }</span>
+        );
+
+        // Optional: bump timeout a bit for campus server
+<span class="nc" id="L144">        req.setRetryPolicy(new DefaultRetryPolicy(</span>
+                15000, // 15s
+                0,
+                1.0f
+        ));
+
+<span class="nc" id="L150">        Volley.newRequestQueue(this).add(req);</span>
+<span class="nc" id="L151">    } // &lt;--- close doSignUp() properly</span>
+    /**
+     * Enables/disables form inputs and shows/hides loading spinner while signup is running.
+     *
+     * @param loading true to show loading state, false to return to normal UI
+     */
+    private void setLoading(boolean loading) {
+<span class="nc bnc" id="L158" title="All 2 branches missed.">        progress.setVisibility(loading ? View.VISIBLE : View.GONE);</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">        btnSignup.setEnabled(!loading);</span>
+<span class="nc bnc" id="L160" title="All 2 branches missed.">        btnBack.setEnabled(!loading);</span>
+<span class="nc bnc" id="L161" title="All 2 branches missed.">        etName.setEnabled(!loading);</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">        etEmail.setEnabled(!loading);</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">        etPassword.setEnabled(!loading);</span>
+<span class="nc" id="L164">    }</span>
+    /**
+     * Safely extracts text from a TextInputEditText.
+     *
+     * @param et input field
+     * @return string value of the field, or empty string if null
+     */
+    private String safeText(TextInputEditText et) {
+<span class="pc bpc" id="L172" title="1 of 2 branches missed.">        return et.getText() == null ? &quot;&quot; : et.getText().toString();</span>
+    }
+    /**
+     * Shows a short Toast message on screen.
+     *
+     * @param msg message to display
+     */
+    private void toast(String msg) {
+<span class="fc" id="L180">        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();</span>
+<span class="fc" id="L181">    }</span>
+    /**
+     * Hides the soft keyboard if any input field currently has focus.
+     */
+    private void hideKeyboard() {
+<span class="fc" id="L186">        View view = getCurrentFocus();</span>
+<span class="fc bfc" id="L187" title="All 2 branches covered.">        if (view != null) {</span>
+<span class="fc" id="L188">            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);</span>
+<span class="pc bpc" id="L189" title="1 of 2 branches missed.">            if (imm != null) imm.hideSoftInputFromWindow(view.getWindowToken(), 0);</span>
+        }
+<span class="fc" id="L191">    }</span>
+}
+
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span>Generated by the Android Gradle plugin 8.13.1</div></body></html>

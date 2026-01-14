@@ -1,0 +1,136 @@
+Dashboard API Reference
+==========================
+
+Summary
+The Dashboard API provides per user statistics.
+All endpoints use the authenticated user with Authorization token, and return data for that user only.
+
+Features:
+- Total number of polls a user has joined
+- Total number of votes a user has cast
+- Breakdown of poll types the user has joined
+- Recent activity (last 5 polls the user interacted with)
+- Simple JSON responses for frontend dashboard widgets
+
+Authentication
+All endpoints require a valid login token sent in the request header:
+Header:
+Authorization: <token>
+
+!!!The token is the authtoken returned by POST /users/login!!!
+
+If the token is missing or invalid, all endpoints return:
+
+{
+"error": "Invalid or expired token"
+}
+
+Base Path: /dashboard
+
+-----------------------------------------------------------
+1. Get Total Polls Joined
+GET /dashboard/polls-joined
+
+Description
+Returns the total number of polls the authenticated user has joined.
+
+Headers:
+Authorization (String, required): Login token for the current user.
+
+Example Request:
+GET /dashboard/polls-joined
+Authorization: abc123-token
+
+Response (JSON):
+{
+"count_polls_joined": 7
+}
+
+Error (invalid token):
+{
+"error": "Invalid or expired token"
+}
+
+!!!If the user has not joined any polls, count_polls_joined will be 0.!!!
+------------------------------------------------------------------------------
+2. Get Total Votes Cast
+GET /dashboard/votes-cast
+
+Description
+Returns the total number of votes the authenticated user has cast across all poll types.
+
+Headers:
+Authorization (String, required): Login token for the current user.
+
+Example Request:
+GET /dashboard/votes-cast
+Authorization: abc123-token
+
+Response (JSON):
+{
+"count_votes_cast": 15
+}
+
+Error (invalid token):
+{
+"error": "Invalid or expired token"
+}
+--------------------------------------------------------------------------------
+3. Get Poll Type Breakdown
+GET /dashboard/poll-types
+
+Description
+Returns a breakdown of the types of polls the authenticated user has joined.
+
+Headers:
+Authorization (String, required): Login token for the current user.
+
+Example Request:
+GET /dashboard/poll-types
+Authorization: abc123-token
+
+Successful JSON Response (example):
+{
+"yes_no": 5,
+"rating": 3,
+"ranking": 2,
+"multiple_choice": 4
+}
+
+Error (invalid token):
+{
+"error": "Invalid or expired token"
+}
+
+!!!If the user hasn’t joined any of a given type, that key will still be present with value 0!!!
+-------------------------------------------------------------------------------------------------
+4. Get Recent Activity
+GET /dashboard/recent-activity
+
+Description
+Returns the last 5 poll interactions by the authenticated user by tracking the polls they most recently joined and polls they most recently voted on
+
+Headers:
+Authorization (String, required): Login token for the current user.
+
+Example Request:
+GET /dashboard/recent-activity
+Authorization: abc123-token
+
+Successful Response (JSON) – example:
+[
+{ "pollName": "Best Pizza in Town", "action": "voted", "time": "2025-12-01T14:23:10.123" },
+{ "pollName": "Thanksgiving Trip", "action": "joined", "time": "2025-11-25T09:45:30.000" },
+{ "pollName": "CS Study Group Time", "action": "voted", "time": "2025-11-20T18:10:05.500" }
+]
+
+pollName (String): Title of the poll
+
+action (String): "joined" or "voted"
+
+time (String): timestamp of the interaction time
+
+Error (invalid token):
+{
+"error": "Invalid or expired token"
+}

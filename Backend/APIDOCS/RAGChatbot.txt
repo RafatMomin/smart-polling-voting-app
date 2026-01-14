@@ -1,0 +1,227 @@
+Chat API Reference
+==================
+
+Summary
+-------
+The Chat API provides intelligent conversational access to poll data using natural language queries.
+It uses hybrid search (exact ID matching + semantic similarity) and retrieval-augmented generation (RAG)
+to answer questions about polls. Users can interact with polls through natural language without needing
+to know specific API endpoints. Authenticated users have their chat history saved and can view past conversations.
+
+Features:
+- Natural language queries about polls
+- Hybrid search: Exact poll ID detection + semantic similarity matching
+- Retrieval-augmented generation (RAG) for accurate responses
+- Authenticated and unauthenticated modes
+- Chat history tracking for authenticated users
+- Automatic poll reference tracking in conversations
+
+Base Path: /chat
+
+----------------------------------------------------
+1. Chat Query (Unauthenticated)
+GET /chat
+
+Query Parameters:
+- message (string, required): User's natural language question
+
+Request Example:
+GET /chat?message=What%20polls%20are%20available%20about%20coffee?
+
+Response:
+Plain text response from AI assistant
+
+Response Example:
+There is an active poll asking "Do you like coffee?" (Poll #1, YES_NO type).
+Current results show 15 Yes votes (75%) and 5 No votes, with 20 total votes.
+
+----------------------------------------------------
+2. Chat Query (Authenticated)
+GET /chat/auth
+
+Query Parameters:
+- message (string, required): User's natural language question
+
+Headers:
+Authorization: {authToken}
+
+Request Example:
+GET /chat/auth?message=Tell%20me%20about%20poll%2050
+Headers:
+  Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+Response:
+Plain text response from AI assistant
+
+Response Example (Success):
+Poll #50: "Rate our customer service (1-5)" is an active RATING poll.
+Current results show an average rating of 4.3 out of 5, with 25 total votes.
+
+Response Example (Invalid Token):
+{ "error": "Invalid or expired authentication token" }
+
+Response Example (Unverified User):
+{ "error": "Please verify your email before using chat" }
+
+----------------------------------------------------
+3. Get Chat History
+GET /chat/history
+
+Headers:
+Authorization: {authToken}
+
+Response (JSON):
+[
+  {
+    "id": 123,
+    "user": {
+      "emailId": "user@example.com",
+      "name": "John Doe"
+    },
+    "userMessage": "Tell me about poll 50",
+    "botResponse": "Poll #50: 'Rate our customer service (1-5)' is an active RATING poll...",
+    "timestamp": "2025-11-04T14:30:00",
+    "referencedPolls": [
+      {
+        "id": 50,
+        "title": "Rate our customer service (1-5)",
+        "type": "RATING",
+        "active": true
+      }
+    ],
+    "responseTimeMs": 1250
+  },
+  {
+    "id": 122,
+    "user": {
+      "emailId": "user@example.com",
+      "name": "John Doe"
+    },
+    "userMessage": "What polls are about coffee?",
+    "botResponse": "There is an active poll asking 'Do you like coffee?'...",
+    "timestamp": "2025-11-04T14:25:00",
+    "referencedPolls": [
+      {
+        "id": 1,
+        "title": "Do you like coffee?",
+        "type": "YES_NO",
+        "active": true
+      }
+    ],
+    "responseTimeMs": 980
+  }
+]
+
+Error Response:
+{ "error": "Invalid token" }
+
+----------------------------------------------------
+4. Get Chat Statistics
+GET /chat/stats
+
+Headers:
+Authorization: {authToken}
+
+Response (JSON):
+{
+  "totalMessages": 47
+}
+
+Error Response:
+{ "error": "Invalid token" }
+
+----------------------------------------------------
+QUERY CAPABILITIES
+----------------------------------------------------
+
+The AI assistant can answer various types of questions about polls:
+
+Direct Poll Lookup:
+- "What is poll 5 about?"
+- "Tell me about poll #50"
+- "Show me poll ID: 25"
+
+Results Queries:
+- "What are the results for poll 10?"
+- "How many votes does the coffee poll have?"
+- "What's winning in poll 15?"
+
+Discovery Queries:
+- "What polls are about food?"
+- "Show me all customer service polls"
+- "Find polls about campus events"
+
+Status Queries:
+- "Is poll 20 still active?"
+- "Which polls are closed?"
+- "Show me active rating polls"
+
+Comparison Queries:
+- "Compare poll 10 and poll 15"
+- "What's the difference between poll 5 and poll 8?"
+
+Options Queries:
+- "What are the choices for poll 30?"
+- "What options does poll 12 have?"
+
+Poll ID Detection:
+The system automatically detects poll IDs in various formats:
+- "poll 50"
+- "poll #50"
+- "#50"
+- "poll ID: 50"
+- "poll id 50"
+
+----------------------------------------------------
+TECHNICAL IMPLEMENTATION
+----------------------------------------------------
+
+Hybrid Search Algorithm:
+1. Extract poll IDs from user query using regex patterns
+2. Fetch directly mentioned polls by ID (priority results)
+3. Generate query embedding vector from user message
+4. Calculate cosine similarity between query and all poll embeddings
+5. Rank polls by similarity score
+6. Combine ID matches (first priority) with semantic matches
+7. Return top 5 most relevant polls to AI context
+8. AI generates response using retrieved poll data
+
+Embeddings:
+- Model: sentence-transformers/all-MiniLM-L6-v2
+- Embedding dimensions: 384
+- Generated automatically when polls are created
+- Stored as JSON string in database
+- Includes poll title, type, status, options, and context
+
+Chat Message Storage:
+- Entity: ChatMessage
+- Relationships:
+  * Many-to-One: ChatMessage → User (via user_email foreign key)
+  * Many-to-Many: ChatMessage ↔ Poll (via chat_poll_references join table)
+- Fields stored:
+  * userMessage (TEXT)
+  * botResponse (TEXT)
+  * timestamp (LocalDateTime)
+  * responseTimeMs (Long)
+  * referencedPolls (List<Poll>)
+
+Authentication:
+- Authenticated endpoints require valid token in Authorization header
+- Token obtained from POST /users/login (see User API Reference)
+- User must have verified email to use authenticated chat
+- Unauthenticated chat does not save history
+- Chat history is isolated per user
+
+Response Format:
+- AI provides specific poll IDs and titles
+- Exact vote counts and percentages
+- Poll status (Active/Closed)
+- Poll types (YES_NO, RATING, MULTIPLE_CHOICE, RANKING)
+- Available options for choice-based polls
+- Context information when available
+
+Performance:
+- Response times tracked in milliseconds
+- Semantic search performs cosine similarity over all polls
+- Uses transaction management for data consistency
+- Lazy loading for poll relationships to optimize queries

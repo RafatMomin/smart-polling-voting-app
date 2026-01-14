@@ -1,0 +1,422 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PollsCreate.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debug</a> &gt; <a href="index.source.html" class="el_package">com.example.frontendproject</a> &gt; <span class="el_source">PollsCreate.java</span></div><h1>PollsCreate.java</h1><pre class="source lang-java linenums">package com.example.frontendproject;
+
+import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
+import android.text.InputType;
+import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ProgressBar;
+import android.widget.Spinner;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.android.volley.Request;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Merged PollsCreate:
+ * - Type spinner (YES OR NO, RATING, MULTIPLE_CHOICE, RANKING)
+ * - Visibility spinner (PUBLIC/PRIVATE) – optional (layout may or may not have it)
+ * - Owner email capture (prompt-once if missing)
+ * - Options parsing for MCQ/Ranking
+ * - Private poll: access code dialog with Copy
+ * - Admin/Moderator chip entry (optional)
+ * - Creates Discussion when token is present, but ALWAYS opens PollingWindow on success
+ */
+<span class="fc" id="L43">public class PollsCreate extends AppCompatActivity {</span>
+
+    private static final String BASE = &quot;http://coms-3090-036.class.las.iastate.edu:8080&quot;;
+
+    // Session / token
+    private SessionManager session;
+    private String token;
+
+    // Common UI
+    private TextInputEditText etTitle, etOptions, etContext;
+    private TextInputLayout tilOptions;
+    private Spinner spType;
+    private Spinner spVisibility;   // may be null if not in layout
+    private Button btnCreate;
+    private ProgressBar progress;
+
+    // Optional admin/moderator UI (present only in some layouts)
+    private TextInputEditText etAdminEmail, etModeratorEmail;
+    private Button btnAddAdmin, btnAddModerator;
+    private ChipGroup chipAdmins, chipModerators;
+
+    // Data for chips
+<span class="fc" id="L65">    private final ArrayList&lt;String&gt; adminEmails = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L66">    private final ArrayList&lt;String&gt; moderatorEmails = new ArrayList&lt;&gt;();</span>
+
+    @Override
+    protected void onCreate(Bundle b) {
+<span class="fc" id="L70">        super.onCreate(b);</span>
+<span class="fc" id="L71">        setContentView(R.layout.activity_create);</span>
+
+<span class="fc" id="L73">        session = new SessionManager(this);</span>
+<span class="fc" id="L74">        token   = session.getToken();</span>
+
+        // Bind common views
+<span class="fc" id="L77">        etTitle      = findViewById(R.id.etTitle);</span>
+<span class="fc" id="L78">        etOptions    = findViewById(R.id.etOptions);</span>
+<span class="fc" id="L79">        tilOptions   = findViewById(R.id.tilOptions);</span>
+<span class="fc" id="L80">        spType       = findViewById(R.id.spType);</span>
+<span class="fc" id="L81">        spVisibility = findViewById(R.id.spVisibility); // optional</span>
+<span class="fc" id="L82">        btnCreate    = findViewById(R.id.btnCreate);</span>
+<span class="fc" id="L83">        progress     = findViewById(R.id.progress);</span>
+<span class="fc" id="L84">        etContext    = findViewById(R.id.etContext);</span>
+
+        // Optional admin/moderator views (may be absent)
+<span class="fc" id="L87">        etAdminEmail     = findViewById(R.id.etAdminEmail);</span>
+<span class="fc" id="L88">        etModeratorEmail = findViewById(R.id.etModeratorEmail);</span>
+<span class="fc" id="L89">        btnAddAdmin      = findViewById(R.id.btnAddAdmin);</span>
+<span class="fc" id="L90">        btnAddModerator  = findViewById(R.id.btnAddModerator);</span>
+<span class="fc" id="L91">        chipAdmins       = findViewById(R.id.chipAdmins);</span>
+<span class="fc" id="L92">        chipModerators   = findViewById(R.id.chipModerators);</span>
+
+<span class="pc bpc" id="L94" title="3 of 6 branches missed.">        if (btnAddAdmin != null &amp;&amp; etAdminEmail != null &amp;&amp; chipAdmins != null) {</span>
+<span class="pc" id="L95">            btnAddAdmin.setOnClickListener(v -&gt; addChip(etAdminEmail, chipAdmins, adminEmails));</span>
+        }
+<span class="pc bpc" id="L97" title="3 of 6 branches missed.">        if (btnAddModerator != null &amp;&amp; etModeratorEmail != null &amp;&amp; chipModerators != null) {</span>
+<span class="pc" id="L98">            btnAddModerator.setOnClickListener(v -&gt; addChip(etModeratorEmail, chipModerators, moderatorEmails));</span>
+        }
+
+        // Type spinner
+<span class="fc" id="L102">        ArrayAdapter&lt;String&gt; a = new ArrayAdapter&lt;&gt;(</span>
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                new String[]{&quot;YES OR NO&quot;, &quot;RATING&quot;, &quot;MULTIPLE_CHOICE&quot;, &quot;RANKING&quot;}
+        );
+<span class="fc" id="L107">        spType.setAdapter(a);</span>
+
+<span class="fc" id="L109">        spType.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {</span>
+            @Override
+            public void onItemSelected(android.widget.AdapterView&lt;?&gt; parent, View view, int position, long id) {
+<span class="pc bpc" id="L112" title="1 of 2 branches missed.">                String t = (spType.getSelectedItem() != null) ? spType.getSelectedItem().toString() : &quot;&quot;;</span>
+<span class="pc bpc" id="L113" title="2 of 4 branches missed.">                boolean needsOptions = t.equals(&quot;MULTIPLE_CHOICE&quot;) || t.equals(&quot;RANKING&quot;);</span>
+<span class="pc bpc" id="L114" title="2 of 4 branches missed.">                if (tilOptions != null) tilOptions.setVisibility(needsOptions ? View.VISIBLE : View.GONE);</span>
+<span class="fc" id="L115">            }</span>
+<span class="nc" id="L116">            @Override public void onNothingSelected(android.widget.AdapterView&lt;?&gt; parent) { }</span>
+        });
+
+        // Visibility spinner (PUBLIC/PRIVATE) — only if present in layout
+<span class="pc bpc" id="L120" title="1 of 2 branches missed.">        if (spVisibility != null) {</span>
+<span class="fc" id="L121">            ArrayAdapter&lt;String&gt; visAdapter = new ArrayAdapter&lt;&gt;(</span>
+                    this,
+                    android.R.layout.simple_spinner_dropdown_item,
+                    new String[]{&quot;PUBLIC&quot;, &quot;PRIVATE&quot;}
+            );
+<span class="fc" id="L126">            spVisibility.setAdapter(visAdapter);</span>
+        }
+
+<span class="pc" id="L129">        btnCreate.setOnClickListener(v -&gt; createPoll());</span>
+<span class="fc" id="L130">    }</span>
+
+    // --------------------------------
+    // Admin/Moderator chip helpers
+    // --------------------------------
+    private void addChip(TextInputEditText input, ChipGroup group, ArrayList&lt;String&gt; list) {
+<span class="nc bnc" id="L136" title="All 2 branches missed.">        String email = (input.getText() != null) ? input.getText().toString().trim() : &quot;&quot;;</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">        if (email.isEmpty()) return;</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">        if (list.contains(email)) return;</span>
+
+<span class="nc" id="L140">        list.add(email);</span>
+
+<span class="nc" id="L142">        Chip c = new Chip(this);</span>
+<span class="nc" id="L143">        c.setText(email);</span>
+<span class="nc" id="L144">        c.setCloseIconVisible(true);</span>
+<span class="nc" id="L145">        c.setOnCloseIconClickListener(v -&gt; {</span>
+<span class="nc" id="L146">            group.removeView(c);</span>
+<span class="nc" id="L147">            list.remove(email);</span>
+<span class="nc" id="L148">        });</span>
+
+<span class="nc" id="L150">        group.addView(c);</span>
+<span class="nc" id="L151">        input.setText(&quot;&quot;);</span>
+<span class="nc" id="L152">    }</span>
+
+    // --------------------------------
+    // Create poll (merged logic)
+    // --------------------------------
+    private void createPoll() {
+<span class="nc bnc" id="L158" title="All 4 branches missed.">        String title = (etTitle != null &amp;&amp; etTitle.getText() != null) ? etTitle.getText().toString().trim() : &quot;&quot;;</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">        if (title.isEmpty()) {</span>
+<span class="nc" id="L160">            Toast.makeText(this, &quot;Please enter a title&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L161">            return;</span>
+        }
+
+<span class="nc bnc" id="L164" title="All 2 branches missed.">        String type = (spType.getSelectedItem() != null) ? spType.getSelectedItem().toString() : &quot;&quot;;</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">        if (type.isEmpty()) {</span>
+<span class="nc" id="L166">            Toast.makeText(this, &quot;Please select a type&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L167">            return;</span>
+        }
+
+        // Visibility defaults to PUBLIC if spinner not present
+<span class="nc" id="L171">        String visibility = &quot;PUBLIC&quot;;</span>
+<span class="nc bnc" id="L172" title="All 4 branches missed.">        if (spVisibility != null &amp;&amp; spVisibility.getSelectedItem() != null) {</span>
+<span class="nc" id="L173">            visibility = spVisibility.getSelectedItem().toString();</span>
+        }
+<span class="nc" id="L175">        final String visibilityFinal = visibility;</span>
+
+        // Endpoint path
+        String path;
+<span class="nc bnc" id="L179" title="All 5 branches missed.">        switch (type) {</span>
+<span class="nc" id="L180">            case &quot;YES OR NO&quot;:       path = &quot;/polls/yesno&quot;;    break;</span>
+<span class="nc" id="L181">            case &quot;RATING&quot;:          path = &quot;/polls/rating&quot;;   break;</span>
+<span class="nc" id="L182">            case &quot;MULTIPLE_CHOICE&quot;: path = &quot;/polls/multiple&quot;; break;</span>
+<span class="nc" id="L183">            case &quot;RANKING&quot;:         path = &quot;/polls/ranking&quot;;  break;</span>
+            default:
+<span class="nc" id="L185">                Toast.makeText(this, &quot;Unknown type&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L186">                return;</span>
+        }
+
+        // Build body
+<span class="nc" id="L190">        JSONObject body = new JSONObject();</span>
+        try {
+<span class="nc" id="L192">            body.put(&quot;title&quot;, title);</span>
+<span class="nc" id="L193">            body.put(&quot;visibility&quot;, visibilityFinal);</span>
+
+            // Owner emailId (prompt-once if missing)
+<span class="nc" id="L196">            String emailId = session.getEmail();</span>
+<span class="nc bnc" id="L197" title="All 4 branches missed.">            if (emailId == null || emailId.trim().isEmpty()) {</span>
+<span class="nc" id="L198">                String candidate = session.getUserId();</span>
+<span class="nc bnc" id="L199" title="All 4 branches missed.">                if (candidate != null &amp;&amp; candidate.contains(&quot;@&quot;)) {</span>
+<span class="nc" id="L200">                    emailId = candidate;</span>
+<span class="nc" id="L201">                    session.setEmail(emailId); // persist</span>
+                }
+            }
+<span class="nc bnc" id="L204" title="All 4 branches missed.">            if (emailId == null || emailId.trim().isEmpty()) {</span>
+<span class="nc" id="L205">                promptForEmailAndTellUserToTapCreateAgain();</span>
+<span class="nc" id="L206">                return; // user will tap Create again after saving email</span>
+            }
+<span class="nc" id="L208">            body.put(&quot;emailId&quot;, emailId);</span>
+
+            // context (optional)
+<span class="nc bnc" id="L211" title="All 4 branches missed.">            if (etContext != null &amp;&amp; etContext.getText() != null) {</span>
+<span class="nc" id="L212">                String ctx = etContext.getText().toString().trim();</span>
+<span class="nc bnc" id="L213" title="All 2 branches missed.">                if (!ctx.isEmpty()) body.put(&quot;context&quot;, ctx);</span>
+            }
+
+            // Options (MCQ/Ranking)
+<span class="nc bnc" id="L217" title="All 4 branches missed.">            boolean needsOptions = type.equals(&quot;MULTIPLE_CHOICE&quot;) || type.equals(&quot;RANKING&quot;);</span>
+<span class="nc bnc" id="L218" title="All 6 branches missed.">            if (needsOptions &amp;&amp; etOptions != null &amp;&amp; etOptions.getText() != null) {</span>
+<span class="nc" id="L219">                String raw = etOptions.getText().toString();</span>
+<span class="nc" id="L220">                String[] parts = raw.split(&quot;,&quot;);</span>
+<span class="nc" id="L221">                JSONArray arr = new JSONArray();</span>
+<span class="nc bnc" id="L222" title="All 2 branches missed.">                for (String p : parts) {</span>
+<span class="nc bnc" id="L223" title="All 2 branches missed.">                    if (p != null) {</span>
+<span class="nc" id="L224">                        String s = p.trim();</span>
+<span class="nc bnc" id="L225" title="All 2 branches missed.">                        if (!s.isEmpty()) arr.put(s);</span>
+                    }
+                }
+<span class="nc bnc" id="L228" title="All 2 branches missed.">                if (arr.length() == 0) {</span>
+<span class="nc" id="L229">                    Toast.makeText(this, &quot;Enter at least one option (comma-separated)&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L230">                    return;</span>
+                }
+<span class="nc" id="L232">                body.put(&quot;options&quot;, arr);</span>
+            }
+
+            // Admin/Moderator arrays (if chip UI exists)
+<span class="nc bnc" id="L236" title="All 4 branches missed.">            if (emailId != null &amp;&amp; !adminEmails.contains(emailId)) adminEmails.add(emailId);</span>
+<span class="nc bnc" id="L237" title="All 2 branches missed.">            if (chipAdmins != null)     body.put(&quot;admins&quot;,     new JSONArray(adminEmails));</span>
+<span class="nc bnc" id="L238" title="All 2 branches missed.">            if (chipModerators != null) body.put(&quot;moderators&quot;, new JSONArray(moderatorEmails));</span>
+
+<span class="nc" id="L240">        } catch (Exception ignore) { }</span>
+
+<span class="nc" id="L242">        setLoading(true);</span>
+
+<span class="nc" id="L244">        JsonObjectRequest req = new JsonObjectRequest(</span>
+                Request.Method.POST,
+                BASE + path,
+                body,
+                resp -&gt; {
+<span class="nc" id="L249">                    setLoading(false);</span>
+
+                    // Extract pollId from different response shapes
+<span class="nc" id="L252">                    int pollId = -1;</span>
+                    try {
+<span class="nc bnc" id="L254" title="All 2 branches missed.">                        if (resp.has(&quot;id&quot;)) {</span>
+<span class="nc" id="L255">                            pollId = resp.optInt(&quot;id&quot;, -1);</span>
+                        }
+<span class="nc bnc" id="L257" title="All 4 branches missed.">                        if (pollId &lt;= 0 &amp;&amp; resp.has(&quot;poll&quot;)) {</span>
+<span class="nc" id="L258">                            JSONObject pollObj = resp.optJSONObject(&quot;poll&quot;);</span>
+<span class="nc bnc" id="L259" title="All 2 branches missed.">                            if (pollObj != null) {</span>
+<span class="nc" id="L260">                                pollId = pollObj.optInt(&quot;id&quot;, -1);</span>
+                            }
+                        }
+<span class="nc" id="L263">                    } catch (Exception ignore) {}</span>
+
+                    // Show access code for PRIVATE if present
+<span class="nc" id="L266">                    String accessCode = null;</span>
+<span class="nc bnc" id="L267" title="All 2 branches missed.">                    if (&quot;PRIVATE&quot;.equalsIgnoreCase(visibilityFinal)) {</span>
+<span class="nc bnc" id="L268" title="All 2 branches missed.">                        if (resp.has(&quot;accessCode&quot;)) {</span>
+<span class="nc" id="L269">                            accessCode = resp.optString(&quot;accessCode&quot;, null);</span>
+                        }
+<span class="nc bnc" id="L271" title="All 4 branches missed.">                        if (accessCode == null &amp;&amp; resp.has(&quot;poll&quot;)) {</span>
+<span class="nc" id="L272">                            JSONObject pollObj = resp.optJSONObject(&quot;poll&quot;);</span>
+<span class="nc bnc" id="L273" title="All 4 branches missed.">                            if (pollObj != null &amp;&amp; pollObj.has(&quot;accessCode&quot;)) {</span>
+<span class="nc" id="L274">                                accessCode = pollObj.optString(&quot;accessCode&quot;, null);</span>
+                            }
+                        }
+                    }
+
+                    // What to do next:
+<span class="nc" id="L280">                    final int finalPollId = pollId;</span>
+<span class="nc" id="L281">                    Runnable gotoNext = () -&gt; {</span>
+                        // If we have a pollId, we ALWAYS open the PollingWindow.
+<span class="nc bnc" id="L283" title="All 2 branches missed.">                        if (finalPollId &gt; 0) {</span>
+                            // If we have a token, try to create a discussion first; otherwise go straight to window.
+<span class="nc bnc" id="L285" title="All 2 branches missed.">                            if (token != null) {</span>
+<span class="nc" id="L286">                                createDiscussionForPoll(finalPollId, title);</span>
+                            } else {
+<span class="nc" id="L288">                                openPollingWindow(finalPollId, title);</span>
+<span class="nc" id="L289">                                finish();</span>
+                            }
+                        } else {
+<span class="nc" id="L292">                            Toast.makeText(this, &quot;Poll created, but missing ID from server.&quot;, Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L293">                            finish();</span>
+                        }
+<span class="nc" id="L295">                    };</span>
+
+<span class="nc bnc" id="L297" title="All 4 branches missed.">                    if (&quot;PRIVATE&quot;.equalsIgnoreCase(visibilityFinal) &amp;&amp;</span>
+<span class="nc bnc" id="L298" title="All 2 branches missed.">                            accessCode != null &amp;&amp; !accessCode.isEmpty()) {</span>
+<span class="nc" id="L299">                        final String codeToCopy = accessCode;</span>
+<span class="nc" id="L300">                        new AlertDialog.Builder(this)</span>
+<span class="nc" id="L301">                                .setTitle(&quot;Private Poll Created&quot;)</span>
+<span class="nc" id="L302">                                .setMessage(&quot;Share this access code with participants:\n\n&quot; + accessCode)</span>
+<span class="nc" id="L303">                                .setPositiveButton(&quot;Copy&quot;, (d, w) -&gt; {</span>
+<span class="nc" id="L304">                                    ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);</span>
+<span class="nc bnc" id="L305" title="All 2 branches missed.">                                    if (cm != null) {</span>
+<span class="nc" id="L306">                                        cm.setPrimaryClip(ClipData.newPlainText(&quot;Access Code&quot;, codeToCopy));</span>
+<span class="nc" id="L307">                                        Toast.makeText(this, &quot;Access code copied&quot;, Toast.LENGTH_SHORT).show();</span>
+                                    }
+<span class="nc" id="L309">                                    gotoNext.run();</span>
+<span class="nc" id="L310">                                })</span>
+<span class="nc" id="L311">                                .setNegativeButton(&quot;Open Window&quot;, (d, w) -&gt; gotoNext.run())</span>
+<span class="nc" id="L312">                                .show();</span>
+<span class="nc" id="L313">                    } else {</span>
+<span class="nc" id="L314">                        gotoNext.run();</span>
+                    }
+<span class="nc" id="L316">                },</span>
+                err -&gt; {
+<span class="nc" id="L318">                    setLoading(false);</span>
+<span class="nc" id="L319">                    int code = -1;</span>
+<span class="nc" id="L320">                    String msg = &quot;&quot;;</span>
+<span class="nc bnc" id="L321" title="All 4 branches missed.">                    if (err != null &amp;&amp; err.networkResponse != null) {</span>
+<span class="nc" id="L322">                        code = err.networkResponse.statusCode;</span>
+<span class="nc bnc" id="L323" title="All 2 branches missed.">                        if (err.networkResponse.data != null) {</span>
+<span class="nc" id="L324">                            msg = new String(err.networkResponse.data);</span>
+                        }
+                    }
+<span class="nc" id="L327">                    Toast.makeText(this, &quot;Create failed (&quot; + code + &quot;): &quot; + msg, Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L328">                }</span>
+<span class="nc" id="L329">        ) {</span>
+            @Override
+            public Map&lt;String, String&gt; getHeaders() {
+<span class="nc" id="L332">                Map&lt;String, String&gt; h = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L333" title="All 2 branches missed.">                if (token != null) h.put(&quot;Authorization&quot;, token);</span>
+<span class="nc" id="L334">                h.put(&quot;Accept&quot;, &quot;application/json&quot;);</span>
+<span class="nc" id="L335">                h.put(&quot;Content-Type&quot;, &quot;application/json&quot;);</span>
+<span class="nc" id="L336">                return h;</span>
+            }
+        };
+
+<span class="nc" id="L340">        AppRequestQueue.get(this).add(req);</span>
+<span class="nc" id="L341">    }</span>
+
+    // Create a discussion for the poll (if token present). On success OR failure, still open window.
+    private void createDiscussionForPoll(int pollId, String title) {
+        try {
+<span class="nc" id="L346">            JSONObject body = new JSONObject();</span>
+<span class="nc" id="L347">            body.put(&quot;title&quot;, &quot;Discussion: &quot; + title);</span>
+<span class="nc" id="L348">            body.put(&quot;description&quot;, &quot;Discussion space for poll: &quot; + title);</span>
+
+<span class="nc" id="L350">            JsonObjectRequest req = new JsonObjectRequest(</span>
+                    Request.Method.POST,
+                    BASE + &quot;/discussions/poll/&quot; + pollId,
+                    body,
+                    resp -&gt; {
+<span class="nc" id="L355">                        Toast.makeText(this, &quot;Poll + Discussion Created!&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L356">                        openPollingWindow(pollId, title);</span>
+<span class="nc" id="L357">                        finish();</span>
+<span class="nc" id="L358">                    },</span>
+                    err -&gt; {
+<span class="nc" id="L360">                        Toast.makeText(this, &quot;Discussion creation failed; opening poll.&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L361">                        openPollingWindow(pollId, title);</span>
+<span class="nc" id="L362">                        finish();</span>
+<span class="nc" id="L363">                    }</span>
+<span class="nc" id="L364">            ) {</span>
+                @Override
+                public Map&lt;String, String&gt; getHeaders() {
+<span class="nc" id="L367">                    Map&lt;String, String&gt; h = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L368" title="All 2 branches missed.">                    if (token != null) h.put(&quot;Authorization&quot;, token);</span>
+<span class="nc" id="L369">                    h.put(&quot;Content-Type&quot;, &quot;application/json&quot;);</span>
+<span class="nc" id="L370">                    return h;</span>
+                }
+            };
+
+<span class="nc" id="L374">            AppRequestQueue.get(this).add(req);</span>
+<span class="nc" id="L375">        } catch (Exception ignored) {</span>
+<span class="nc" id="L376">            openPollingWindow(pollId, title);</span>
+<span class="nc" id="L377">            finish();</span>
+<span class="nc" id="L378">        }</span>
+<span class="nc" id="L379">    }</span>
+
+    // Navigate to PollingWindow with the new pollId
+    private void openPollingWindow(int pollId, String title) {
+        try {
+<span class="nc" id="L384">            Intent i = new Intent(PollsCreate.this, PollingWindow.class);</span>
+<span class="nc" id="L385">            i.putExtra(&quot;pollId&quot;, pollId);</span>
+<span class="nc" id="L386">            i.putExtra(&quot;title&quot;, title);</span>
+<span class="nc" id="L387">            startActivity(i);</span>
+<span class="nc" id="L388">        } catch (Exception e) {</span>
+<span class="nc" id="L389">            Toast.makeText(this, &quot;Failed to open Polling Window&quot;, Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L390">        }</span>
+<span class="nc" id="L391">    }</span>
+
+    // Loading state
+    private void setLoading(boolean on) {
+<span class="nc bnc" id="L395" title="All 4 branches missed.">        if (progress != null) progress.setVisibility(on ? View.VISIBLE : View.GONE);</span>
+<span class="nc bnc" id="L396" title="All 4 branches missed.">        if (btnCreate != null) btnCreate.setEnabled(!on);</span>
+<span class="nc" id="L397">    }</span>
+
+    // Email prompt (one-time)
+    private void promptForEmailAndTellUserToTapCreateAgain() {
+<span class="nc" id="L401">        final TextInputEditText input = new TextInputEditText(this);</span>
+<span class="nc" id="L402">        input.setHint(&quot;you@iastate.edu&quot;);</span>
+<span class="nc" id="L403">        input.setInputType(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);</span>
+
+<span class="nc" id="L405">        new AlertDialog.Builder(this)</span>
+<span class="nc" id="L406">                .setTitle(&quot;Add your email&quot;)</span>
+<span class="nc" id="L407">                .setMessage(&quot;Enter your email once so private polls show up for you.&quot;)</span>
+<span class="nc" id="L408">                .setView(input)</span>
+<span class="nc" id="L409">                .setPositiveButton(&quot;Save&quot;, (d, w) -&gt; {</span>
+<span class="nc bnc" id="L410" title="All 2 branches missed.">                    String typed = (input.getText() != null) ? input.getText().toString().trim() : &quot;&quot;;</span>
+<span class="nc bnc" id="L411" title="All 4 branches missed.">                    if (typed.isEmpty() || !typed.contains(&quot;@&quot;)) {</span>
+<span class="nc" id="L412">                        Toast.makeText(this, &quot;Please enter a valid email&quot;, Toast.LENGTH_SHORT).show();</span>
+                    } else {
+<span class="nc" id="L414">                        session.setEmail(typed);</span>
+<span class="nc" id="L415">                        Toast.makeText(this, &quot;Saved! Tap Create again.&quot;, Toast.LENGTH_SHORT).show();</span>
+                    }
+<span class="nc" id="L417">                })</span>
+<span class="nc" id="L418">                .setNegativeButton(&quot;Cancel&quot;, null)</span>
+<span class="nc" id="L419">                .show();</span>
+<span class="nc" id="L420">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span>Generated by the Android Gradle plugin 8.13.1</div></body></html>

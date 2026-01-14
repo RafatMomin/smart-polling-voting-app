@@ -1,0 +1,521 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PollsActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debug</a> &gt; <a href="index.source.html" class="el_package">com.example.frontendproject</a> &gt; <span class="el_source">PollsActivity.java</span></div><h1>PollsActivity.java</h1><pre class="source lang-java linenums">package com.example.frontendproject;
+
+import android.app.AlertDialog;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.android.volley.Request;
+import com.android.volley.toolbox.StringRequest;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.textfield.TextInputEditText;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.List;
+
+<span class="fc" id="L32">public class PollsActivity extends AppCompatActivity {</span>
+
+    private static final String BASE = &quot;http://coms-3090-036.class.las.iastate.edu:8080&quot;;
+    private static final String POLLS_URL = BASE + &quot;/polls&quot;;
+    private static final String JOIN_URL  = BASE + &quot;/polls/join&quot;;
+    private static final int MENU_JOIN_PRIVATE = 1001;
+    private static final int MENU_DASHBOARD = 1002;
+
+    private SessionManager session;
+
+    private RecyclerView recycler;
+    private View progress;
+    private View empty;
+    private TextInputEditText etSearch;
+    private FloatingActionButton fabAdd;
+
+<span class="fc" id="L48">    private final List&lt;Poll&gt; all = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L49">    private final List&lt;Poll&gt; filtered = new ArrayList&lt;&gt;();</span>
+    private PollsRecycle adapter;
+
+<span class="fc" id="L52">    private double latExtra = Double.NaN;</span>
+<span class="fc" id="L53">    private double lngExtra = Double.NaN;</span>
+
+<span class="fc" id="L55">    private int pendingOpenPollId = -1;</span>
+
+    private Chip chipTypeAll, chipTypeYesNo, chipTypeRating, chipTypeMCQ, chipTypeRanking;
+    private Chip chipVisAll, chipVisPublic, chipVisPrivate;
+
+<span class="fc" id="L60">    private String currentType = null;</span>
+<span class="fc" id="L61">    private String currentVisibility = null;</span>
+
+    @Override
+    protected void onCreate(Bundle b) {
+<span class="fc" id="L65">        super.onCreate(b);</span>
+<span class="fc" id="L66">        setContentView(R.layout.activity_polls);</span>
+
+        try {
+<span class="fc" id="L69">            androidx.appcompat.widget.Toolbar tb = findViewById(R.id.toolbarPolls);</span>
+<span class="pc bpc" id="L70" title="1 of 2 branches missed.">            if (tb != null) setSupportActionBar(tb);</span>
+<span class="pc" id="L71">        } catch (Exception ignore) {}</span>
+
+<span class="fc" id="L73">        session = new SessionManager(this);</span>
+
+<span class="fc" id="L75">        FloatingActionButton fabChat = findViewById(R.id.fabChat);</span>
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">        if (fabChat != null) {</span>
+<span class="fc" id="L77">            fabChat.setOnClickListener(v -&gt;</span>
+<span class="fc" id="L78">                    startActivity(new Intent(PollsActivity.this, ChatActivity.class))</span>
+            );
+        }
+
+<span class="fc" id="L82">        recycler = findViewById(R.id.recyclerPolls);</span>
+<span class="fc" id="L83">        progress = findViewById(R.id.progress);</span>
+<span class="fc" id="L84">        empty    = findViewById(R.id.emptyState);</span>
+<span class="fc" id="L85">        etSearch = findViewById(R.id.etSearch);</span>
+<span class="fc" id="L86">        fabAdd   = findViewById(R.id.fabAdd);</span>
+
+<span class="fc" id="L88">        chipTypeAll = findViewById(R.id.chipTypeAll);</span>
+<span class="fc" id="L89">        chipTypeYesNo = findViewById(R.id.chipTypeYesNo);</span>
+<span class="fc" id="L90">        chipTypeRating = findViewById(R.id.chipTypeRating);</span>
+<span class="fc" id="L91">        chipTypeMCQ = findViewById(R.id.chipTypeMCQ);</span>
+<span class="fc" id="L92">        chipTypeRanking = findViewById(R.id.chipTypeRanking);</span>
+
+<span class="fc" id="L94">        chipVisAll = findViewById(R.id.chipVisAll);</span>
+<span class="fc" id="L95">        chipVisPublic = findViewById(R.id.chipVisPublic);</span>
+<span class="fc" id="L96">        chipVisPrivate = findViewById(R.id.chipVisPrivate);</span>
+
+<span class="fc" id="L98">        latExtra = getIntent().getDoubleExtra(&quot;lat&quot;, Double.NaN);</span>
+<span class="fc" id="L99">        lngExtra = getIntent().getDoubleExtra(&quot;lng&quot;, Double.NaN);</span>
+
+<span class="fc" id="L101">        LinearLayoutManager lm = new LinearLayoutManager(this);</span>
+<span class="fc" id="L102">        recycler.setLayoutManager(lm);</span>
+<span class="fc" id="L103">        recycler.setHasFixedSize(false);</span>
+<span class="fc" id="L104">        recycler.setItemViewCacheSize(20);</span>
+<span class="fc" id="L105">        recycler.setOverScrollMode(View.OVER_SCROLL_ALWAYS);</span>
+<span class="fc" id="L106">        recycler.setNestedScrollingEnabled(true);</span>
+
+<span class="fc" id="L108">        adapter = new PollsRecycle(filtered, p -&gt; {</span>
+<span class="nc bnc" id="L109" title="All 4 branches missed.">            if (p.isPrivate() &amp;&amp; !p.isMember) {</span>
+<span class="nc" id="L110">                showJoinDialogForPoll(p.id);</span>
+<span class="nc" id="L111">                return;</span>
+            }
+
+<span class="nc" id="L114">            Intent i = new Intent(PollsActivity.this, VoteActivity.class);</span>
+<span class="nc" id="L115">            i.putExtra(&quot;pollId&quot;, p.id);</span>
+<span class="nc" id="L116">            i.putExtra(&quot;title&quot;,  p.title);</span>
+<span class="nc" id="L117">            i.putExtra(&quot;type&quot;,   p.type);</span>
+<span class="nc" id="L118">            i.putExtra(&quot;token&quot;,  session.getToken());</span>
+
+<span class="nc bnc" id="L120" title="All 2 branches missed.">            if (p.choices != null) {</span>
+<span class="nc" id="L121">                i.putStringArrayListExtra(&quot;options&quot;, new ArrayList&lt;&gt;(p.choices));</span>
+            }
+<span class="nc bnc" id="L123" title="All 2 branches missed.">            if (!Double.isNaN(latExtra)) i.putExtra(&quot;lat&quot;, latExtra);</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">            if (!Double.isNaN(lngExtra)) i.putExtra(&quot;lng&quot;, lngExtra);</span>
+<span class="nc" id="L125">            startActivity(i);</span>
+<span class="nc" id="L126">        });</span>
+<span class="fc" id="L127">        recycler.setAdapter(adapter);</span>
+
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">        if (etSearch != null) {</span>
+<span class="fc" id="L130">            etSearch.addTextChangedListener(new TextWatcher() {</span>
+<span class="nc" id="L131">                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }</span>
+<span class="nc" id="L132">                @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }</span>
+                @Override public void afterTextChanged(Editable s) {
+<span class="nc bnc" id="L134" title="All 2 branches missed.">                    String text = (s != null) ? s.toString() : &quot;&quot;;</span>
+<span class="nc" id="L135">                    applyFilter(text);</span>
+<span class="nc" id="L136">                }</span>
+            });
+        }
+
+<span class="pc bpc" id="L140" title="1 of 2 branches missed.">        if (fabAdd != null) {</span>
+<span class="fc" id="L141">            fabAdd.setOnClickListener(v -&gt; {</span>
+<span class="fc" id="L142">                Intent i = new Intent(PollsActivity.this, PollsCreate.class);</span>
+<span class="fc" id="L143">                i.putExtra(&quot;token&quot;, session.getToken());</span>
+<span class="fc" id="L144">                startActivity(i);</span>
+<span class="fc" id="L145">            });</span>
+        }
+
+<span class="pc bpc" id="L148" title="1 of 2 branches missed.">        if (chipTypeAll != null) chipTypeAll.setChecked(true);</span>
+<span class="pc bpc" id="L149" title="1 of 2 branches missed.">        if (chipVisAll != null) chipVisAll.setChecked(true);</span>
+<span class="fc" id="L150">        setupFilterListeners();</span>
+
+<span class="fc" id="L152">        loadPolls();</span>
+<span class="fc" id="L153">    }</span>
+
+    @Override
+    protected void onResume() {
+<span class="fc" id="L157">        super.onResume();</span>
+<span class="fc" id="L158">        loadPolls();</span>
+<span class="fc" id="L159">    }</span>
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+<span class="fc" id="L163">        menu.add(0, MENU_JOIN_PRIVATE, 0, &quot;Join Private Poll&quot;);</span>
+<span class="fc" id="L164">        menu.add(0, MENU_DASHBOARD, 1, &quot;Dashboard&quot;);</span>
+<span class="fc" id="L165">        return true;</span>
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+<span class="nc" id="L170">        int id = item.getItemId();</span>
+
+<span class="nc bnc" id="L172" title="All 2 branches missed.">        if (id == MENU_JOIN_PRIVATE) {</span>
+<span class="nc" id="L173">            showJoinDialog();</span>
+<span class="nc" id="L174">            return true;</span>
+<span class="nc bnc" id="L175" title="All 2 branches missed.">        } else if (id == MENU_DASHBOARD) {</span>
+<span class="nc" id="L176">            Intent intent = new Intent(PollsActivity.this, DashboardActivity.class);</span>
+<span class="nc" id="L177">            startActivity(intent);</span>
+<span class="nc" id="L178">            return true;</span>
+        }
+
+<span class="nc" id="L181">        return super.onOptionsItemSelected(item);</span>
+    }
+
+    private void showJoinDialog() {
+<span class="nc" id="L185">        final EditText input = new EditText(this);</span>
+<span class="nc" id="L186">        input.setHint(&quot;Enter access code (e.g., ABCD1234)&quot;);</span>
+<span class="nc" id="L187">        input.setSingleLine(true);</span>
+
+<span class="nc" id="L189">        new AlertDialog.Builder(this)</span>
+<span class="nc" id="L190">                .setTitle(&quot;Join Private Poll&quot;)</span>
+<span class="nc" id="L191">                .setView(input)</span>
+<span class="nc" id="L192">                .setPositiveButton(&quot;Join&quot;, (d, which) -&gt; {</span>
+<span class="nc bnc" id="L193" title="All 2 branches missed.">                    String code = (input.getText() != null) ? input.getText().toString().trim() : &quot;&quot;;</span>
+<span class="nc bnc" id="L194" title="All 2 branches missed.">                    if (code.isEmpty()) {</span>
+<span class="nc" id="L195">                        Toast.makeText(this, &quot;Please enter a code&quot;, Toast.LENGTH_SHORT).show();</span>
+                    } else {
+<span class="nc" id="L197">                        joinWithCode(code);</span>
+                    }
+<span class="nc" id="L199">                })</span>
+<span class="nc" id="L200">                .setNegativeButton(&quot;Cancel&quot;, null)</span>
+<span class="nc" id="L201">                .show();</span>
+<span class="nc" id="L202">    }</span>
+
+    private void showJoinDialogForPoll(int pollId) {
+<span class="nc" id="L205">        final EditText input = new EditText(this);</span>
+<span class="nc" id="L206">        input.setHint(&quot;Enter access code (e.g., ABCD1234)&quot;);</span>
+<span class="nc" id="L207">        input.setSingleLine(true);</span>
+
+<span class="nc" id="L209">        new AlertDialog.Builder(this)</span>
+<span class="nc" id="L210">                .setTitle(&quot;Private Poll&quot;)</span>
+<span class="nc" id="L211">                .setMessage(&quot;This poll is private. Enter the access code to join.&quot;)</span>
+<span class="nc" id="L212">                .setView(input)</span>
+<span class="nc" id="L213">                .setPositiveButton(&quot;Join&quot;, (d, which) -&gt; {</span>
+<span class="nc bnc" id="L214" title="All 2 branches missed.">                    String code = (input.getText() != null) ? input.getText().toString().trim() : &quot;&quot;;</span>
+<span class="nc bnc" id="L215" title="All 2 branches missed.">                    if (code.isEmpty()) {</span>
+<span class="nc" id="L216">                        Toast.makeText(this, &quot;Please enter a code&quot;, Toast.LENGTH_SHORT).show();</span>
+                    } else {
+<span class="nc" id="L218">                        pendingOpenPollId = pollId;</span>
+<span class="nc" id="L219">                        joinWithCode(code);</span>
+                    }
+<span class="nc" id="L221">                })</span>
+<span class="nc" id="L222">                .setNegativeButton(&quot;Cancel&quot;, null)</span>
+<span class="nc" id="L223">                .show();</span>
+<span class="nc" id="L224">    }</span>
+
+    private void joinWithCode(String code) {
+        try {
+<span class="nc" id="L228">            JSONObject body = new JSONObject();</span>
+<span class="nc" id="L229">            body.put(&quot;code&quot;, code);</span>
+
+<span class="nc bnc" id="L231" title="All 2 branches missed.">            String email = (session != null) ? session.getEmail() : null;</span>
+<span class="nc bnc" id="L232" title="All 4 branches missed.">            if (email == null || email.trim().isEmpty()) {</span>
+<span class="nc bnc" id="L233" title="All 2 branches missed.">                String cand = (session != null) ? session.getUserId() : null;</span>
+<span class="nc bnc" id="L234" title="All 4 branches missed.">                if (cand != null &amp;&amp; cand.contains(&quot;@&quot;)) {</span>
+<span class="nc" id="L235">                    email = cand;</span>
+<span class="nc" id="L236">                    session.setEmail(email);</span>
+                }
+            }
+<span class="nc bnc" id="L239" title="All 4 branches missed.">            if (email == null || email.trim().isEmpty()) {</span>
+<span class="nc" id="L240">                Toast.makeText(this, &quot;Set your email first (login or create once).&quot;, Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L241">                return;</span>
+            }
+<span class="nc" id="L243">            body.put(&quot;emailId&quot;, email);</span>
+
+<span class="nc bnc" id="L245" title="All 2 branches missed.">            if (progress != null) progress.setVisibility(View.VISIBLE);</span>
+
+<span class="nc" id="L247">            com.android.volley.toolbox.JsonObjectRequest req =</span>
+                    new com.android.volley.toolbox.JsonObjectRequest(
+                            Request.Method.POST,
+                            JOIN_URL,
+                            body,
+                            resp -&gt; {
+<span class="nc bnc" id="L253" title="All 2 branches missed.">                                if (progress != null) progress.setVisibility(View.GONE);</span>
+
+<span class="nc" id="L255">                                int joinedId = resp.optInt(&quot;pollId&quot;, -1);</span>
+<span class="nc bnc" id="L256" title="All 4 branches missed.">                                if (pendingOpenPollId == -1 &amp;&amp; joinedId != -1) {</span>
+<span class="nc" id="L257">                                    pendingOpenPollId = joinedId;</span>
+                                }
+
+<span class="nc" id="L260">                                Toast.makeText(this, &quot;Joined! Refreshing polls…&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L261">                                loadPolls();</span>
+<span class="nc" id="L262">                            },</span>
+                            err -&gt; {
+<span class="nc bnc" id="L264" title="All 2 branches missed.">                                if (progress != null) progress.setVisibility(View.GONE);</span>
+<span class="nc" id="L265">                                int codeNum = -1;</span>
+<span class="nc" id="L266">                                String msg = &quot;&quot;;</span>
+<span class="nc bnc" id="L267" title="All 4 branches missed.">                                if (err != null &amp;&amp; err.networkResponse != null) {</span>
+<span class="nc" id="L268">                                    codeNum = err.networkResponse.statusCode;</span>
+<span class="nc bnc" id="L269" title="All 2 branches missed.">                                    if (err.networkResponse.data != null) {</span>
+<span class="nc" id="L270">                                        msg = new String(err.networkResponse.data);</span>
+                                    }
+                                }
+<span class="nc bnc" id="L273" title="All 2 branches missed.">                                if (codeNum == 410) {</span>
+<span class="nc" id="L274">                                    Toast.makeText(this, &quot;Code expired. Ask owner for a new one.&quot;, Toast.LENGTH_LONG).show();</span>
+<span class="nc bnc" id="L275" title="All 2 branches missed.">                                } else if (codeNum == 403) {</span>
+<span class="nc" id="L276">                                    Toast.makeText(this, &quot;Invalid or disabled code.&quot;, Toast.LENGTH_LONG).show();</span>
+<span class="nc bnc" id="L277" title="All 2 branches missed.">                                } else if (codeNum == 429) {</span>
+<span class="nc" id="L278">                                    Toast.makeText(this, &quot;Too many attempts. Try later.&quot;, Toast.LENGTH_LONG).show();</span>
+                                } else {
+<span class="nc" id="L280">                                    Toast.makeText(this, &quot;Join failed (&quot; + codeNum + &quot;): &quot; + msg, Toast.LENGTH_LONG).show();</span>
+                                }
+<span class="nc" id="L282">                            }</span>
+<span class="nc" id="L283">                    ) {</span>
+                        @Override
+                        public java.util.Map&lt;String, String&gt; getHeaders() {
+<span class="nc" id="L286">                            java.util.Map&lt;String, String&gt; h = new java.util.HashMap&lt;&gt;();</span>
+<span class="nc" id="L287">                            h.put(&quot;Accept&quot;, &quot;application/json&quot;);</span>
+<span class="nc" id="L288">                            h.put(&quot;Content-Type&quot;, &quot;application/json&quot;);</span>
+<span class="nc" id="L289">                            return h;</span>
+                        }
+                    };
+
+<span class="nc" id="L293">            AppRequestQueue.get(this).add(req);</span>
+<span class="nc" id="L294">        } catch (Exception e) {</span>
+<span class="nc" id="L295">            Toast.makeText(this, &quot;Failed to build join request&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L296">        }</span>
+<span class="nc" id="L297">    }</span>
+
+    private void setupFilterListeners() {
+<span class="pc bpc" id="L300" title="1 of 2 branches missed.">        if (chipTypeAll != null) {</span>
+<span class="fc" id="L301">            chipTypeAll.setOnClickListener(v -&gt; {</span>
+<span class="fc" id="L302">                currentType = null;</span>
+<span class="pc bpc" id="L303" title="2 of 4 branches missed.">                String q = (etSearch != null &amp;&amp; etSearch.getText() != null)</span>
+<span class="pc" id="L304">                        ? etSearch.getText().toString() : &quot;&quot;;</span>
+<span class="fc" id="L305">                applyFilter(q);</span>
+<span class="fc" id="L306">            });</span>
+        }
+<span class="pc bpc" id="L308" title="1 of 2 branches missed.">        if (chipTypeYesNo != null) {</span>
+<span class="fc" id="L309">            chipTypeYesNo.setOnClickListener(v -&gt; {</span>
+<span class="fc" id="L310">                currentType = &quot;YES_NO&quot;;</span>
+<span class="pc bpc" id="L311" title="2 of 4 branches missed.">                String q = (etSearch != null &amp;&amp; etSearch.getText() != null)</span>
+<span class="pc" id="L312">                        ? etSearch.getText().toString() : &quot;&quot;;</span>
+<span class="fc" id="L313">                applyFilter(q);</span>
+<span class="fc" id="L314">            });</span>
+        }
+<span class="pc bpc" id="L316" title="1 of 2 branches missed.">        if (chipTypeRating != null) {</span>
+<span class="fc" id="L317">            chipTypeRating.setOnClickListener(v -&gt; {</span>
+<span class="fc" id="L318">                currentType = &quot;RATING&quot;;</span>
+<span class="pc bpc" id="L319" title="2 of 4 branches missed.">                String q = (etSearch != null &amp;&amp; etSearch.getText() != null)</span>
+<span class="pc" id="L320">                        ? etSearch.getText().toString() : &quot;&quot;;</span>
+<span class="fc" id="L321">                applyFilter(q);</span>
+<span class="fc" id="L322">            });</span>
+        }
+<span class="pc bpc" id="L324" title="1 of 2 branches missed.">        if (chipTypeMCQ != null) {</span>
+<span class="fc" id="L325">            chipTypeMCQ.setOnClickListener(v -&gt; {</span>
+<span class="fc" id="L326">                currentType = &quot;MULTIPLE_CHOICE&quot;;</span>
+<span class="pc bpc" id="L327" title="2 of 4 branches missed.">                String q = (etSearch != null &amp;&amp; etSearch.getText() != null)</span>
+<span class="pc" id="L328">                        ? etSearch.getText().toString() : &quot;&quot;;</span>
+<span class="fc" id="L329">                applyFilter(q);</span>
+<span class="fc" id="L330">            });</span>
+        }
+<span class="pc bpc" id="L332" title="1 of 2 branches missed.">        if (chipTypeRanking != null) {</span>
+<span class="fc" id="L333">            chipTypeRanking.setOnClickListener(v -&gt; {</span>
+<span class="fc" id="L334">                currentType = &quot;RANKING&quot;;</span>
+<span class="pc bpc" id="L335" title="2 of 4 branches missed.">                String q = (etSearch != null &amp;&amp; etSearch.getText() != null)</span>
+<span class="pc" id="L336">                        ? etSearch.getText().toString() : &quot;&quot;;</span>
+<span class="fc" id="L337">                applyFilter(q);</span>
+<span class="fc" id="L338">            });</span>
+        }
+
+<span class="pc bpc" id="L341" title="1 of 2 branches missed.">        if (chipVisAll != null) {</span>
+<span class="fc" id="L342">            chipVisAll.setOnClickListener(v -&gt; {</span>
+<span class="fc" id="L343">                currentVisibility = null;</span>
+<span class="pc bpc" id="L344" title="2 of 4 branches missed.">                String q = (etSearch != null &amp;&amp; etSearch.getText() != null)</span>
+<span class="pc" id="L345">                        ? etSearch.getText().toString() : &quot;&quot;;</span>
+<span class="fc" id="L346">                applyFilter(q);</span>
+<span class="fc" id="L347">            });</span>
+        }
+<span class="pc bpc" id="L349" title="1 of 2 branches missed.">        if (chipVisPublic != null) {</span>
+<span class="fc" id="L350">            chipVisPublic.setOnClickListener(v -&gt; {</span>
+<span class="fc" id="L351">                currentVisibility = &quot;PUBLIC&quot;;</span>
+<span class="pc bpc" id="L352" title="2 of 4 branches missed.">                String q = (etSearch != null &amp;&amp; etSearch.getText() != null)</span>
+<span class="pc" id="L353">                        ? etSearch.getText().toString() : &quot;&quot;;</span>
+<span class="fc" id="L354">                applyFilter(q);</span>
+<span class="fc" id="L355">            });</span>
+        }
+<span class="pc bpc" id="L357" title="1 of 2 branches missed.">        if (chipVisPrivate != null) {</span>
+<span class="fc" id="L358">            chipVisPrivate.setOnClickListener(v -&gt; {</span>
+<span class="fc" id="L359">                currentVisibility = &quot;PRIVATE&quot;;</span>
+<span class="pc bpc" id="L360" title="2 of 4 branches missed.">                String q = (etSearch != null &amp;&amp; etSearch.getText() != null)</span>
+<span class="pc" id="L361">                        ? etSearch.getText().toString() : &quot;&quot;;</span>
+<span class="fc" id="L362">                applyFilter(q);</span>
+<span class="fc" id="L363">            });</span>
+        }
+<span class="fc" id="L365">    }</span>
+
+    private void applyFilter(String q) {
+<span class="pc bpc" id="L368" title="1 of 2 branches missed.">        String query = (q != null) ? q.trim().toLowerCase() : &quot;&quot;;</span>
+
+<span class="fc" id="L370">        filtered.clear();</span>
+<span class="fc bfc" id="L371" title="All 2 branches covered.">        for (Poll p : all) {</span>
+<span class="fc bfc" id="L372" title="All 2 branches covered.">            if (currentType != null) {</span>
+<span class="pc bpc" id="L373" title="1 of 4 branches missed.">                if (p.type == null || !currentType.equalsIgnoreCase(p.type)) {</span>
+<span class="fc" id="L374">                    continue;</span>
+                }
+            }
+<span class="fc bfc" id="L377" title="All 2 branches covered.">            if (currentVisibility != null) {</span>
+<span class="pc bpc" id="L378" title="1 of 4 branches missed.">                if (p.visibility == null || !currentVisibility.equalsIgnoreCase(p.visibility)) {</span>
+<span class="fc" id="L379">                    continue;</span>
+                }
+            }
+
+<span class="pc bpc" id="L383" title="1 of 2 branches missed.">            if (!query.isEmpty()) {</span>
+<span class="nc bnc" id="L384" title="All 2 branches missed.">                String t = (p.title != null) ? p.title.toLowerCase() : &quot;&quot;;</span>
+<span class="nc bnc" id="L385" title="All 2 branches missed.">                String ty = (p.type != null) ? p.type.toLowerCase() : &quot;&quot;;</span>
+<span class="nc bnc" id="L386" title="All 4 branches missed.">                if (!t.contains(query) &amp;&amp; !ty.contains(query)) {</span>
+<span class="nc" id="L387">                    continue;</span>
+                }
+            }
+
+<span class="fc" id="L391">            filtered.add(p);</span>
+<span class="fc" id="L392">        }</span>
+
+<span class="fc" id="L394">        adapter.notifyDataSetChanged();</span>
+<span class="pc bpc" id="L395" title="1 of 4 branches missed.">        if (empty != null) empty.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);</span>
+<span class="fc" id="L396">    }</span>
+
+    private void loadPolls() {
+<span class="pc bpc" id="L399" title="1 of 2 branches missed.">        if (progress != null) progress.setVisibility(View.VISIBLE);</span>
+
+<span class="fc" id="L401">        String baseUrl = POLLS_URL;</span>
+<span class="fc" id="L402">        List&lt;String&gt; params = new ArrayList&lt;&gt;();</span>
+
+        try {
+<span class="pc bpc" id="L405" title="1 of 2 branches missed.">            String email = (session != null) ? session.getEmail() : null;</span>
+<span class="pc bpc" id="L406" title="2 of 4 branches missed.">            if (email == null || email.trim().isEmpty()) {</span>
+<span class="nc bnc" id="L407" title="All 2 branches missed.">                String candidate = (session != null) ? session.getUserId() : null;</span>
+<span class="nc bnc" id="L408" title="All 4 branches missed.">                if (candidate != null &amp;&amp; candidate.contains(&quot;@&quot;)) {</span>
+<span class="nc" id="L409">                    email = candidate;</span>
+<span class="nc" id="L410">                    session.setEmail(email);</span>
+                }
+            }
+<span class="pc bpc" id="L413" title="2 of 4 branches missed.">            if (email != null &amp;&amp; !email.trim().isEmpty()) {</span>
+<span class="fc" id="L414">                params.add(&quot;emailId=&quot; + Uri.encode(email));</span>
+            }
+<span class="pc" id="L416">        } catch (Exception ignore) {}</span>
+
+<span class="pc bpc" id="L418" title="1 of 2 branches missed.">        if (currentType != null) {</span>
+<span class="nc" id="L419">            params.add(&quot;type=&quot; + Uri.encode(currentType));</span>
+        }
+<span class="pc bpc" id="L421" title="1 of 2 branches missed.">        if (currentVisibility != null) {</span>
+<span class="nc" id="L422">            params.add(&quot;visibility=&quot; + Uri.encode(currentVisibility));</span>
+        }
+
+<span class="fc" id="L425">        String url = baseUrl;</span>
+<span class="pc bpc" id="L426" title="1 of 2 branches missed.">        if (!params.isEmpty()) {</span>
+<span class="fc" id="L427">            StringBuilder sb = new StringBuilder(baseUrl);</span>
+<span class="fc" id="L428">            sb.append(&quot;?&quot;);</span>
+<span class="fc bfc" id="L429" title="All 2 branches covered.">            for (int i = 0; i &lt; params.size(); i++) {</span>
+<span class="pc bpc" id="L430" title="1 of 2 branches missed.">                if (i &gt; 0) sb.append(&quot;&amp;&quot;);</span>
+<span class="fc" id="L431">                sb.append(params.get(i));</span>
+            }
+<span class="fc" id="L433">            url = sb.toString();</span>
+        }
+
+<span class="fc" id="L436">        StringRequest req = new StringRequest(</span>
+                Request.Method.GET,
+                url,
+                resp -&gt; {
+<span class="pc bpc" id="L440" title="1 of 2 branches missed.">                    if (progress != null) progress.setVisibility(View.GONE);</span>
+                    try {
+<span class="fc" id="L442">                        JSONArray arr = new JSONArray(resp);</span>
+<span class="fc" id="L443">                        all.clear();</span>
+
+<span class="fc bfc" id="L445" title="All 2 branches covered.">                        for (int i = 0; i &lt; arr.length(); i++) {</span>
+<span class="fc" id="L446">                            JSONObject o = arr.getJSONObject(i);</span>
+
+<span class="fc" id="L448">                            Poll p = new Poll();</span>
+<span class="fc" id="L449">                            p.id    = o.optInt(&quot;id&quot;, -1);</span>
+<span class="fc" id="L450">                            p.title = o.optString(&quot;title&quot;, &quot;&quot;);</span>
+<span class="fc" id="L451">                            p.type  = o.optString(&quot;type&quot;,  &quot;&quot;);</span>
+<span class="fc" id="L452">                            p.now   = o.optBoolean(&quot;active&quot;, true);</span>
+
+<span class="fc" id="L454">                            p.visibility    = o.optString(&quot;visibility&quot;, &quot;PUBLIC&quot;);</span>
+<span class="fc" id="L455">                            p.hasAccessCode = o.optBoolean(&quot;hasAccessCode&quot;, false);</span>
+<span class="fc" id="L456">                            p.isMember      = o.optBoolean(&quot;isMember&quot;, true);</span>
+
+<span class="fc" id="L458">                            JSONArray opts = o.optJSONArray(&quot;options&quot;);</span>
+<span class="fc bfc" id="L459" title="All 2 branches covered.">                            if (opts != null) {</span>
+<span class="fc" id="L460">                                ArrayList&lt;String&gt; list = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L461" title="All 2 branches covered.">                                for (int j = 0; j &lt; opts.length(); j++) {</span>
+<span class="fc" id="L462">                                    list.add(opts.optString(j));</span>
+                                }
+<span class="fc" id="L464">                                p.choices = list;</span>
+                            }
+
+<span class="fc" id="L467">                            all.add(p);</span>
+                        }
+
+<span class="pc bpc" id="L470" title="2 of 4 branches missed.">                        String q = (etSearch != null &amp;&amp; etSearch.getText() != null)</span>
+<span class="pc" id="L471">                                ? etSearch.getText().toString() : &quot;&quot;;</span>
+<span class="fc" id="L472">                        applyFilter(q);</span>
+
+<span class="pc bpc" id="L474" title="1 of 2 branches missed.">                        if (pendingOpenPollId != -1) {</span>
+<span class="nc" id="L475">                            Poll target = null;</span>
+<span class="nc bnc" id="L476" title="All 2 branches missed.">                            for (Poll x : filtered) {</span>
+<span class="nc bnc" id="L477" title="All 2 branches missed.">                                if (x.id == pendingOpenPollId) { target = x; break; }</span>
+<span class="nc" id="L478">                            }</span>
+<span class="nc bnc" id="L479" title="All 2 branches missed.">                            if (target == null) {</span>
+<span class="nc bnc" id="L480" title="All 2 branches missed.">                                for (Poll x : all) {</span>
+<span class="nc bnc" id="L481" title="All 2 branches missed.">                                    if (x.id == pendingOpenPollId) { target = x; break; }</span>
+<span class="nc" id="L482">                                }</span>
+                            }
+<span class="nc bnc" id="L484" title="All 2 branches missed.">                            if (target != null) {</span>
+<span class="nc" id="L485">                                pendingOpenPollId = -1;</span>
+<span class="nc" id="L486">                                Intent i = new Intent(PollsActivity.this, VoteActivity.class);</span>
+<span class="nc" id="L487">                                i.putExtra(&quot;pollId&quot;, target.id);</span>
+<span class="nc" id="L488">                                i.putExtra(&quot;title&quot;,  target.title);</span>
+<span class="nc" id="L489">                                i.putExtra(&quot;type&quot;,   target.type);</span>
+<span class="nc" id="L490">                                i.putExtra(&quot;token&quot;,  session.getToken());</span>
+<span class="nc bnc" id="L491" title="All 2 branches missed.">                                if (target.choices != null) {</span>
+<span class="nc" id="L492">                                    i.putStringArrayListExtra(&quot;options&quot;, new ArrayList&lt;&gt;(target.choices));</span>
+                                }
+<span class="nc bnc" id="L494" title="All 2 branches missed.">                                if (!Double.isNaN(latExtra)) i.putExtra(&quot;lat&quot;, latExtra);</span>
+<span class="nc bnc" id="L495" title="All 2 branches missed.">                                if (!Double.isNaN(lngExtra)) i.putExtra(&quot;lng&quot;, lngExtra);</span>
+<span class="nc" id="L496">                                startActivity(i);</span>
+                            }
+                        }
+<span class="nc" id="L499">                    } catch (Exception e) {</span>
+<span class="nc" id="L500">                        Toast.makeText(this, &quot;Failed to parse polls&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc bnc" id="L501" title="All 4 branches missed.">                        if (empty != null) empty.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);</span>
+<span class="fc" id="L502">                    }</span>
+<span class="fc" id="L503">                },</span>
+                err -&gt; {
+<span class="nc bnc" id="L505" title="All 2 branches missed.">                    if (progress != null) progress.setVisibility(View.GONE);</span>
+<span class="nc" id="L506">                    Toast.makeText(this, &quot;Failed to load polls&quot;, Toast.LENGTH_LONG).show();</span>
+<span class="nc bnc" id="L507" title="All 4 branches missed.">                    if (empty != null) empty.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);</span>
+<span class="nc" id="L508">                }</span>
+<span class="fc" id="L509">        ) {</span>
+            @Override
+            public java.util.Map&lt;String, String&gt; getHeaders() {
+<span class="fc" id="L512">                java.util.Map&lt;String, String&gt; h = new java.util.HashMap&lt;&gt;();</span>
+<span class="fc" id="L513">                h.put(&quot;Accept&quot;, &quot;application/json&quot;);</span>
+<span class="fc" id="L514">                return h;</span>
+            }
+        };
+
+<span class="fc" id="L518">        AppRequestQueue.get(this).add(req);</span>
+<span class="fc" id="L519">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span>Generated by the Android Gradle plugin 8.13.1</div></body></html>

@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ResultsActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debug</a> &gt; <a href="index.source.html" class="el_package">com.example.frontendproject</a> &gt; <span class="el_source">ResultsActivity.java</span></div><h1>ResultsActivity.java</h1><pre class="source lang-java linenums">package com.example.frontendproject;
+
+import static android.content.Intent.getIntent;
+
+import android.os.Bundle;
+import android.util.Log;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.android.volley.Request;
+import com.android.volley.toolbox.StringRequest;
+import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.charts.PieChart;
+import com.github.mikephil.charting.components.XAxis;
+import com.github.mikephil.charting.data.BarData;
+import com.github.mikephil.charting.data.BarDataSet;
+import com.github.mikephil.charting.data.BarEntry;
+import com.github.mikephil.charting.data.PieData;
+import com.github.mikephil.charting.data.PieDataSet;
+import com.github.mikephil.charting.data.PieEntry;
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.schedulers.Schedulers;
+import ua.naiksoftware.stomp.Stomp;
+import ua.naiksoftware.stomp.StompClient;
+import ua.naiksoftware.stomp.dto.LifecycleEvent;
+
+<span class="fc" id="L41">public class ResultsActivity extends AppCompatActivity {</span>
+
+    private static final String TAG = &quot;ResultsActivity&quot;;
+
+    private static final String BASE = &quot;http://coms-3090-036.class.las.iastate.edu:8080&quot;;
+    private static final String HTTP_BASE = &quot;http://coms-3090-036.class.las.iastate.edu:8080&quot;;
+    private static final String WS_URL = &quot;ws://coms-3090-036.class.las.iastate.edu:8080/ws/live-results/websocket&quot;;
+
+<span class="fc" id="L49">    private int pollId = -1;</span>
+<span class="fc" id="L50">    private String pollTitle = &quot;&quot;;</span>
+<span class="fc" id="L51">    private String pollType = &quot;&quot;;</span>
+
+    private TextView txtTitleResults;
+    private TextView txtResults;
+
+    private TextView tvStatus, tvStream, tvMeta;
+    private Button btnSeeResults, btnSendDummyVote;
+    private PieChart pieChart;
+    private BarChart barChart;
+    private RecyclerView listRanking;
+
+    private StompClient stompClient;
+<span class="fc" id="L63">    private final CompositeDisposable disposables = new CompositeDisposable();</span>
+<span class="fc" id="L64">    private volatile boolean connected = false;</span>
+
+    @Override
+    protected void onCreate(@Nullable Bundle b) {
+<span class="fc" id="L68">        super.onCreate(b);</span>
+<span class="fc" id="L69">        setContentView(R.layout.activity_results);</span>
+
+<span class="fc" id="L71">        pollId = getIntent().getIntExtra(&quot;pollId&quot;, -1);</span>
+<span class="fc" id="L72">        pollTitle = getIntent().getStringExtra(&quot;title&quot;);</span>
+<span class="fc" id="L73">        pollType = getIntent().getStringExtra(&quot;type&quot;);</span>
+
+<span class="fc" id="L75">        txtTitleResults = findViewById(R.id.txtTitleResults);</span>
+<span class="fc" id="L76">        txtResults = findViewById(R.id.txtResults);</span>
+
+<span class="fc" id="L78">        tvStatus = findViewById(R.id.tvStatus);</span>
+<span class="fc" id="L79">        tvStream = findViewById(R.id.tvOutput);</span>
+<span class="fc" id="L80">        tvMeta = findViewById(R.id.tvMeta);</span>
+<span class="fc" id="L81">        btnSeeResults = findViewById(R.id.btnSeeResults);</span>
+
+
+<span class="fc" id="L84">        pieChart = findViewById(R.id.pieChart);</span>
+<span class="fc" id="L85">        barChart = findViewById(R.id.barChart);</span>
+<span class="fc" id="L86">        listRanking = findViewById(R.id.listRanking);</span>
+
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">        if (listRanking != null) {</span>
+<span class="fc" id="L89">            listRanking.setLayoutManager(new LinearLayoutManager(this));</span>
+        }
+
+<span class="pc bpc" id="L92" title="1 of 2 branches missed.">        if (btnSeeResults != null) btnSeeResults.setEnabled(false);</span>
+<span class="pc bpc" id="L93" title="1 of 2 branches missed.">        if (btnSendDummyVote != null) btnSendDummyVote.setEnabled(false);</span>
+
+<span class="pc bpc" id="L95" title="1 of 2 branches missed.">        if (txtTitleResults != null) {</span>
+<span class="fc" id="L96">            String t = &quot;&quot;;</span>
+<span class="pc bpc" id="L97" title="1 of 2 branches missed.">            if (pollTitle != null) t = pollTitle;</span>
+<span class="pc bpc" id="L98" title="2 of 4 branches missed.">            if (pollType != null &amp;&amp; !pollType.isEmpty()) {</span>
+<span class="fc" id="L99">                t = t + &quot;  •  &quot; + pollType.replace('_', ' ');</span>
+            }
+<span class="fc" id="L101">            txtTitleResults.setText(t);</span>
+        }
+
+<span class="fc" id="L104">        loadResults();</span>
+<span class="fc" id="L105">        connectStomp();</span>
+
+<span class="pc bpc" id="L107" title="1 of 2 branches missed.">        if (btnSeeResults != null) {</span>
+<span class="pc" id="L108">            btnSeeResults.setOnClickListener(v -&gt; subscribeToResults());</span>
+        }
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">        if (btnSendDummyVote != null) {</span>
+<span class="nc" id="L111">            btnSendDummyVote.setOnClickListener(v -&gt; sendDummyVote());</span>
+        }
+<span class="fc" id="L113">    }</span>
+
+    private void connectStomp() {
+<span class="pc bpc" id="L116" title="1 of 2 branches missed.">        if (tvStatus != null) tvStatus.setText(&quot;Connecting to live results…&quot;);</span>
+
+<span class="fc" id="L118">        stompClient = Stomp.over(Stomp.ConnectionProvider.OKHTTP, WS_URL);</span>
+<span class="fc" id="L119">        stompClient.withClientHeartbeat(10000);</span>
+<span class="fc" id="L120">        stompClient.withServerHeartbeat(10000);</span>
+
+<span class="fc" id="L122">        disposables.add(</span>
+<span class="fc" id="L123">                stompClient.lifecycle()</span>
+<span class="fc" id="L124">                        .subscribeOn(Schedulers.io())</span>
+<span class="fc" id="L125">                        .observeOn(AndroidSchedulers.mainThread())</span>
+<span class="fc" id="L126">                        .subscribe(lce -&gt; {</span>
+<span class="pc bpc" id="L127" title="1 of 2 branches missed.">                            if (lce.getType() == LifecycleEvent.Type.OPENED) {</span>
+<span class="fc" id="L128">                                connected = true;</span>
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">                                if (tvStatus != null) tvStatus.setText(&quot;Connected ✅&quot;);</span>
+<span class="pc bpc" id="L130" title="1 of 2 branches missed.">                                if (btnSeeResults != null) btnSeeResults.setEnabled(true);</span>
+<span class="pc bpc" id="L131" title="1 of 2 branches missed.">                                if (btnSendDummyVote != null) btnSendDummyVote.setEnabled(true);</span>
+<span class="nc bnc" id="L132" title="All 2 branches missed.">                            } else if (lce.getType() == LifecycleEvent.Type.ERROR) {</span>
+<span class="nc" id="L133">                                connected = false;</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">                                if (tvStatus != null) tvStatus.setText(&quot;WS error&quot;);</span>
+<span class="nc" id="L135">                                Log.e(TAG, &quot;WS error&quot;, lce.getException());</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">                            } else if (lce.getType() == LifecycleEvent.Type.CLOSED) {</span>
+<span class="nc" id="L137">                                connected = false;</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">                                if (tvStatus != null) tvStatus.setText(&quot;Disconnected ❌&quot;);</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">                                if (btnSeeResults != null) btnSeeResults.setEnabled(false);</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">                                if (btnSendDummyVote != null) btnSendDummyVote.setEnabled(false);</span>
+                            }
+<span class="fc" id="L142">                        }, err -&gt; {</span>
+<span class="nc" id="L143">                            connected = false;</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">                            if (tvStatus != null) tvStatus.setText(&quot;Lifecycle error&quot;);</span>
+<span class="nc" id="L145">                            Log.e(TAG, &quot;Lifecycle error&quot;, err);</span>
+<span class="nc" id="L146">                        })</span>
+        );
+
+<span class="fc" id="L149">        stompClient.connect();</span>
+<span class="fc" id="L150">    }</span>
+
+    private void subscribeToResults() {
+<span class="nc bnc" id="L153" title="All 2 branches missed.">        if (!connected) {</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">            if (tvStatus != null) tvStatus.setText(&quot;Not connected yet…&quot;);</span>
+<span class="nc" id="L155">            return;</span>
+        }
+
+<span class="nc" id="L158">        fetchInitialResults();</span>
+
+<span class="nc" id="L160">        String topic = &quot;/topic/poll/&quot; + pollId;</span>
+<span class="nc bnc" id="L161" title="All 2 branches missed.">        if (tvStatus != null) tvStatus.setText(&quot;Subscribed to &quot; + topic);</span>
+
+<span class="nc" id="L163">        disposables.add(</span>
+<span class="nc" id="L164">                stompClient.topic(topic)</span>
+<span class="nc" id="L165">                        .subscribeOn(Schedulers.io())</span>
+<span class="nc" id="L166">                        .observeOn(AndroidSchedulers.mainThread())</span>
+<span class="nc" id="L167">                        .subscribe(msg -&gt; {</span>
+                            try {
+<span class="nc" id="L169">                                JSONObject o = new JSONObject(msg.getPayload());</span>
+<span class="nc" id="L170">                                renderLiveResultsMessage(o);</span>
+<span class="nc" id="L171">                                try { renderResults(o); } catch (Exception ignored) {}</span>
+<span class="nc" id="L172">                            } catch (Exception e) {</span>
+<span class="nc bnc" id="L173" title="All 2 branches missed.">                                if (tvStatus != null) tvStatus.setText(&quot;Parse error&quot;);</span>
+<span class="nc" id="L174">                            }</span>
+<span class="nc" id="L175">                        }, err -&gt; {</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">                            if (tvStatus != null) tvStatus.setText(&quot;Subscribe error&quot;);</span>
+<span class="nc" id="L177">                            Log.e(TAG, &quot;subscribe error&quot;, err);</span>
+<span class="nc" id="L178">                        })</span>
+        );
+<span class="nc" id="L180">    }</span>
+
+    private void fetchInitialResults() {
+<span class="nc bnc" id="L183" title="All 2 branches missed.">        if (pollId &lt;= 0) return;</span>
+
+<span class="nc" id="L185">        String url = HTTP_BASE + &quot;/live-results/poll/&quot; + pollId;</span>
+
+<span class="nc" id="L187">        StringRequest req = new StringRequest(</span>
+                Request.Method.GET,
+                url,
+                resp -&gt; {
+                    try {
+<span class="nc" id="L192">                        JSONObject initial = new JSONObject(resp);</span>
+<span class="nc" id="L193">                        renderLiveResultsMessage(initial);</span>
+<span class="nc" id="L194">                        try { renderResults(initial); } catch (Exception ignored) {}</span>
+<span class="nc" id="L195">                    } catch (Exception e) {</span>
+<span class="nc" id="L196">                        Toast.makeText(this, &quot;Failed to parse initial results&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L197">                    }</span>
+<span class="nc" id="L198">                },</span>
+<span class="nc" id="L199">                err -&gt; Toast.makeText(this, &quot;Failed to fetch initial results&quot;, Toast.LENGTH_SHORT).show()</span>
+        );
+
+<span class="nc" id="L202">        AppRequestQueue.get(this).add(req);</span>
+<span class="nc" id="L203">    }</span>
+
+    private void sendDummyVote() {
+<span class="nc bnc" id="L206" title="All 2 branches missed.">        if (!connected) {</span>
+<span class="nc bnc" id="L207" title="All 2 branches missed.">            if (tvStatus != null) tvStatus.setText(&quot;Not connected yet…&quot;);</span>
+<span class="nc" id="L208">            return;</span>
+        }
+        try {
+<span class="nc" id="L211">            JSONObject vote = new JSONObject();</span>
+<span class="nc" id="L212">            vote.put(&quot;choiceId&quot;, 1);</span>
+<span class="nc" id="L213">            vote.put(&quot;userId&quot;, 999);</span>
+
+<span class="nc" id="L215">            String dest = &quot;/app/polls/&quot; + pollId + &quot;/vote&quot;;</span>
+<span class="nc" id="L216">            disposables.add(</span>
+<span class="nc" id="L217">                    stompClient.send(dest, vote.toString())</span>
+<span class="nc" id="L218">                            .subscribeOn(Schedulers.io())</span>
+<span class="nc" id="L219">                            .observeOn(AndroidSchedulers.mainThread())</span>
+<span class="nc" id="L220">                            .subscribe(() -&gt; {</span>
+<span class="nc bnc" id="L221" title="All 2 branches missed.">                                if (tvStatus != null) tvStatus.setText(&quot;Vote sent ✅&quot;);</span>
+<span class="nc" id="L222">                            }, err -&gt; {</span>
+<span class="nc bnc" id="L223" title="All 2 branches missed.">                                if (tvStatus != null) tvStatus.setText(&quot;Send error&quot;);</span>
+<span class="nc" id="L224">                            })</span>
+            );
+<span class="nc" id="L226">        } catch (Exception e) {</span>
+<span class="nc bnc" id="L227" title="All 2 branches missed.">            if (tvStatus != null) tvStatus.setText(&quot;Vote JSON error&quot;);</span>
+<span class="nc" id="L228">        }</span>
+<span class="nc" id="L229">    }</span>
+
+    private void renderLiveResultsMessage(JSONObject o) throws Exception {
+<span class="nc" id="L232">        int total = o.optInt(&quot;totalVotes&quot;, 0);</span>
+<span class="nc" id="L233">        String status = o.optString(&quot;status&quot;, &quot;—&quot;);</span>
+
+<span class="nc bnc" id="L235" title="All 2 branches missed.">        if (tvMeta != null) {</span>
+<span class="nc" id="L236">            tvMeta.setText(&quot;Total: &quot; + total + &quot;   •   Status: &quot; + status);</span>
+        }
+
+<span class="nc" id="L239">        JSONArray dist = o.getJSONArray(&quot;distribution&quot;);</span>
+<span class="nc" id="L240">        ArrayList&lt;String&gt; labels = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L241">        ArrayList&lt;BarEntry&gt; bars = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L242">        ArrayList&lt;PieEntry&gt; pies = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L244" title="All 2 branches missed.">        for (int i = 0; i &lt; dist.length(); i++) {</span>
+<span class="nc" id="L245">            JSONObject d = dist.getJSONObject(i);</span>
+<span class="nc" id="L246">            int optionId = d.getInt(&quot;optionId&quot;);</span>
+<span class="nc" id="L247">            int count = d.getInt(&quot;count&quot;);</span>
+<span class="nc" id="L248">            double pct = d.optDouble(&quot;percent&quot;, -1);</span>
+
+<span class="nc" id="L250">            String label = &quot;Option &quot; + optionId;</span>
+<span class="nc" id="L251">            labels.add(label);</span>
+<span class="nc" id="L252">            bars.add(new BarEntry(i, (float) count));</span>
+
+<span class="nc bnc" id="L254" title="All 2 branches missed.">            if (pct &gt;= 0) pies.add(new PieEntry((float) pct, label));</span>
+<span class="nc" id="L255">            else pies.add(new PieEntry((float) count, label));</span>
+        }
+
+<span class="nc" id="L258">        showBar(labels, bars);</span>
+<span class="nc" id="L259">    }</span>
+
+    private void showPie(ArrayList&lt;PieEntry&gt; entries) {
+<span class="nc bnc" id="L262" title="All 4 branches missed.">        if (pieChart == null || barChart == null) return;</span>
+
+<span class="nc" id="L264">        pieChart.setVisibility(android.view.View.VISIBLE);</span>
+<span class="nc" id="L265">        barChart.setVisibility(android.view.View.GONE);</span>
+
+<span class="nc" id="L267">        PieDataSet ds = new PieDataSet(entries, &quot;&quot;);</span>
+<span class="nc" id="L268">        ds.setSliceSpace(2f);</span>
+<span class="nc" id="L269">        ds.setValueTextSize(12f);</span>
+
+<span class="nc" id="L271">        PieData data = new PieData(ds);</span>
+<span class="nc" id="L272">        pieChart.setData(data);</span>
+<span class="nc" id="L273">        pieChart.getDescription().setEnabled(false);</span>
+<span class="nc" id="L274">        pieChart.setUsePercentValues(true);</span>
+<span class="nc" id="L275">        pieChart.setDrawHoleEnabled(true);</span>
+<span class="nc" id="L276">        pieChart.animateY(400);</span>
+<span class="nc" id="L277">        pieChart.invalidate();</span>
+<span class="nc" id="L278">    }</span>
+
+    private void showBar(ArrayList&lt;String&gt; labels, ArrayList&lt;BarEntry&gt; entries) {
+<span class="nc bnc" id="L281" title="All 4 branches missed.">        if (pieChart == null || barChart == null) return;</span>
+
+<span class="nc" id="L283">        pieChart.setVisibility(android.view.View.GONE);</span>
+<span class="nc" id="L284">        barChart.setVisibility(android.view.View.VISIBLE);</span>
+
+<span class="nc" id="L286">        BarDataSet ds = new BarDataSet(entries, &quot;&quot;);</span>
+<span class="nc" id="L287">        ds.setValueTextSize(12f);</span>
+
+<span class="nc" id="L289">        BarData data = new BarData(ds);</span>
+<span class="nc" id="L290">        data.setBarWidth(0.6f);</span>
+
+<span class="nc" id="L292">        barChart.setData(data);</span>
+
+<span class="nc" id="L294">        XAxis x = barChart.getXAxis();</span>
+<span class="nc" id="L295">        x.setValueFormatter(new IndexAxisValueFormatter(labels));</span>
+<span class="nc" id="L296">        x.setGranularity(1f);</span>
+<span class="nc" id="L297">        x.setPosition(XAxis.XAxisPosition.BOTTOM);</span>
+
+<span class="nc" id="L299">        barChart.getAxisRight().setEnabled(false);</span>
+<span class="nc" id="L300">        barChart.getDescription().setEnabled(false);</span>
+<span class="nc" id="L301">        barChart.setFitBars(true);</span>
+<span class="nc" id="L302">        barChart.animateY(400);</span>
+<span class="nc" id="L303">        barChart.invalidate();</span>
+<span class="nc" id="L304">    }</span>
+
+    private void loadResults() {
+<span class="pc bpc" id="L307" title="1 of 2 branches missed.">        if (pollId &lt;= 0) {</span>
+<span class="nc" id="L308">            Toast.makeText(this, &quot;Invalid poll id&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L309">            finish();</span>
+<span class="nc" id="L310">            return;</span>
+        }
+
+<span class="fc" id="L313">        String url = BASE + &quot;/polls/&quot; + pollId + &quot;/results&quot;;</span>
+
+<span class="fc" id="L315">        StringRequest req = new StringRequest(</span>
+                Request.Method.GET,
+                url,
+                resp -&gt; {
+                    try {
+<span class="fc" id="L320">                        JSONObject o = new JSONObject(resp);</span>
+<span class="fc" id="L321">                        renderResults(o);</span>
+<span class="nc" id="L322">                    } catch (Exception e) {</span>
+<span class="nc" id="L323">                        Toast.makeText(this, &quot;Failed to parse results&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="fc" id="L324">                    }</span>
+<span class="fc" id="L325">                },</span>
+                err -&gt; {
+<span class="nc" id="L327">                    int code = -1;</span>
+<span class="nc" id="L328">                    String body = &quot;&quot;;</span>
+<span class="nc bnc" id="L329" title="All 4 branches missed.">                    if (err != null &amp;&amp; err.networkResponse != null) {</span>
+<span class="nc" id="L330">                        code = err.networkResponse.statusCode;</span>
+<span class="nc bnc" id="L331" title="All 2 branches missed.">                        if (err.networkResponse.data != null) {</span>
+<span class="nc" id="L332">                            body = new String(err.networkResponse.data);</span>
+                        }
+                    }
+<span class="nc" id="L335">                    Toast.makeText(this, &quot;Failed to load results (&quot; + code + &quot;): &quot; + body, Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L336">                }</span>
+<span class="fc" id="L337">        ) {</span>
+            @Override
+            public java.util.Map&lt;String, String&gt; getHeaders() {
+<span class="fc" id="L340">                java.util.Map&lt;String, String&gt; h = new java.util.HashMap&lt;&gt;();</span>
+<span class="fc" id="L341">                h.put(&quot;Accept&quot;, &quot;application/json&quot;);</span>
+<span class="fc" id="L342">                return h;</span>
+            }
+        };
+
+<span class="fc" id="L346">        AppRequestQueue.get(this).add(req);</span>
+<span class="fc" id="L347">    }</span>
+
+    private void renderResults(JSONObject o) {
+<span class="fc" id="L350">        String t = &quot;&quot;;</span>
+<span class="pc bpc" id="L351" title="1 of 2 branches missed.">        if (pollType != null) t = pollType;</span>
+
+<span class="pc bpc" id="L353" title="1 of 2 branches missed.">        if (&quot;YES_NO&quot;.equalsIgnoreCase(t)) {</span>
+<span class="fc" id="L354">            int yes = o.optInt(&quot;yes&quot;, 0);</span>
+<span class="fc" id="L355">            int no = o.optInt(&quot;no&quot;, 0);</span>
+<span class="fc" id="L356">            int total = o.optInt(&quot;total&quot;, yes + no);</span>
+<span class="pc bpc" id="L357" title="1 of 2 branches missed.">            double pct = total == 0 ? 0.0 : (yes * 100.0) / total;</span>
+
+<span class="fc" id="L359">            String text = &quot;Yes: &quot; + yes + &quot;\n&quot;</span>
+                    + &quot;No: &quot; + no + &quot;\n&quot;
+                    + &quot;Total: &quot; + total + &quot;\n&quot;
+                    + &quot;Yes %: &quot; + pct;
+<span class="pc bpc" id="L363" title="1 of 2 branches missed.">            if (txtResults != null) txtResults.setText(text);</span>
+<span class="fc" id="L364">            return;</span>
+        }
+
+<span class="nc bnc" id="L367" title="All 2 branches missed.">        if (&quot;RATING&quot;.equalsIgnoreCase(t)) {</span>
+<span class="nc" id="L368">            int total = o.optInt(&quot;totalVotes&quot;, o.optInt(&quot;total&quot;, 0));</span>
+<span class="nc" id="L369">            double avg = o.optDouble(&quot;average&quot;, 0.0);</span>
+<span class="nc" id="L370">            int max = o.optInt(&quot;max&quot;, 5);</span>
+
+<span class="nc" id="L372">            String text = &quot;Average: &quot; + avg + &quot; / &quot; + max + &quot;\n&quot;</span>
+                    + &quot;Total votes: &quot; + total;
+<span class="nc bnc" id="L374" title="All 2 branches missed.">            if (txtResults != null) txtResults.setText(text);</span>
+<span class="nc" id="L375">            return;</span>
+        }
+
+<span class="nc bnc" id="L378" title="All 2 branches missed.">        if (&quot;MULTIPLE_CHOICE&quot;.equalsIgnoreCase(t)) {</span>
+<span class="nc" id="L379">            StringBuilder sb = new StringBuilder();</span>
+<span class="nc" id="L380">            int total = o.optInt(&quot;totalVotes&quot;, 0);</span>
+<span class="nc" id="L381">            sb.append(&quot;Total votes: &quot;).append(total).append(&quot;\n&quot;);</span>
+
+<span class="nc" id="L383">            JSONArray breakdown = o.optJSONArray(&quot;breakdown&quot;);</span>
+<span class="nc bnc" id="L384" title="All 2 branches missed.">            if (breakdown != null) {</span>
+<span class="nc bnc" id="L385" title="All 2 branches missed.">                for (int i = 0; i &lt; breakdown.length(); i++) {</span>
+<span class="nc" id="L386">                    JSONObject row = breakdown.optJSONObject(i);</span>
+<span class="nc bnc" id="L387" title="All 2 branches missed.">                    if (row != null) {</span>
+<span class="nc" id="L388">                        String option = row.optString(&quot;option&quot;, &quot;&quot;);</span>
+<span class="nc" id="L389">                        int count = row.optInt(&quot;count&quot;, 0);</span>
+<span class="nc" id="L390">                        double percent = row.optDouble(&quot;percent&quot;, 0);</span>
+<span class="nc" id="L391">                        sb.append(option)</span>
+<span class="nc" id="L392">                                .append(&quot;: &quot;)</span>
+<span class="nc" id="L393">                                .append(count)</span>
+<span class="nc" id="L394">                                .append(&quot; (&quot;)</span>
+<span class="nc" id="L395">                                .append(percent)</span>
+<span class="nc" id="L396">                                .append(&quot;%)&quot;)</span>
+<span class="nc" id="L397">                                .append(&quot;\n&quot;);</span>
+                    }
+                }
+            }
+<span class="nc bnc" id="L401" title="All 2 branches missed.">            if (txtResults != null) txtResults.setText(sb.toString());</span>
+<span class="nc" id="L402">            return;</span>
+        }
+
+<span class="nc bnc" id="L405" title="All 2 branches missed.">        if (&quot;RANKING&quot;.equalsIgnoreCase(t)) {</span>
+<span class="nc" id="L406">            StringBuilder sb = new StringBuilder();</span>
+<span class="nc" id="L407">            int total = o.optInt(&quot;totalVotes&quot;, 0);</span>
+<span class="nc" id="L408">            sb.append(&quot;Total votes: &quot;).append(total).append(&quot;\n&quot;);</span>
+
+<span class="nc" id="L410">            JSONArray scores = o.optJSONArray(&quot;scores&quot;);</span>
+<span class="nc bnc" id="L411" title="All 2 branches missed.">            if (scores != null) {</span>
+<span class="nc bnc" id="L412" title="All 2 branches missed.">                for (int i = 0; i &lt; scores.length(); i++) {</span>
+<span class="nc" id="L413">                    JSONObject row = scores.optJSONObject(i);</span>
+<span class="nc bnc" id="L414" title="All 2 branches missed.">                    if (row != null) {</span>
+<span class="nc" id="L415">                        String choice = row.optString(&quot;choice&quot;, &quot;&quot;);</span>
+<span class="nc" id="L416">                        int score = row.optInt(&quot;score&quot;, 0);</span>
+<span class="nc" id="L417">                        sb.append(choice).append(&quot;: &quot;).append(score).append(&quot;\n&quot;);</span>
+                    }
+                }
+            }
+<span class="nc bnc" id="L421" title="All 2 branches missed.">            if (txtResults != null) txtResults.setText(sb.toString());</span>
+<span class="nc" id="L422">            return;</span>
+        }
+
+<span class="nc bnc" id="L425" title="All 2 branches missed.">        if (txtResults != null) txtResults.setText(o.toString());</span>
+<span class="nc" id="L426">    }</span>
+
+    @Override
+    protected void onDestroy() {
+<span class="fc" id="L430">        super.onDestroy();</span>
+<span class="fc" id="L431">        disposables.dispose();</span>
+<span class="pc bpc" id="L432" title="1 of 2 branches missed.">        if (stompClient != null) stompClient.disconnect();</span>
+<span class="fc" id="L433">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span>Generated by the Android Gradle plugin 8.13.1</div></body></html>

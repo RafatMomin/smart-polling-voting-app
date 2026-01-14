@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:padding="16dp"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <EditText
+        android:id="@+id/etGroupName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Group Name"/>
+
+    <EditText
+        android:id="@+id/etEmails"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Member Emails (comma separated)"
+        android:layout_marginTop="8dp"/>
+
+    <ProgressBar
+        android:id="@+id/progressGroup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:layout_gravity="center"
+        android:layout_marginTop="10dp"/>
+
+    <Button
+        android:id="@+id/btnCreateGroupFinal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Create Group"
+        android:layout_marginTop="12dp"/>
+
+</LinearLayout>

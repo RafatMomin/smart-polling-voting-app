@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OtpVerificationActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debug</a> &gt; <a href="index.source.html" class="el_package">com.example.frontendproject</a> &gt; <span class="el_source">OtpVerificationActivity.java</span></div><h1>OtpVerificationActivity.java</h1><pre class="source lang-java linenums">package com.example.frontendproject;
+
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.android.volley.NetworkResponse;
+import com.android.volley.Request;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+import com.example.frontendproject.net.Api;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
+
+<span class="fc" id="L22">public class OtpVerificationActivity extends AppCompatActivity {</span>
+
+    public static final String EXTRA_EMAIL = &quot;extra_email&quot;;
+
+    private TextInputLayout tilOtp;
+    private TextInputEditText etOtp;
+    private Button btnVerify;
+    private TextView tvResend, tvTimer, tvSubtitle;
+    private ProgressBar progress;
+
+    private String email;
+
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+<span class="fc" id="L36">        super.onCreate(savedInstanceState);</span>
+<span class="fc" id="L37">        setContentView(R.layout.activity_otp_verification);</span>
+
+<span class="fc" id="L39">        email = getIntent().getStringExtra(EXTRA_EMAIL);</span>
+<span class="pc bpc" id="L40" title="1 of 2 branches missed.">        if (email == null) email = &quot;&quot;;</span>
+
+<span class="fc" id="L42">        tilOtp = findViewById(R.id.tilOtp);</span>
+<span class="fc" id="L43">        etOtp = findViewById(R.id.etOtp);</span>
+<span class="fc" id="L44">        btnVerify = findViewById(R.id.btnVerify);</span>
+<span class="fc" id="L45">        tvResend = findViewById(R.id.tvResend);</span>
+<span class="fc" id="L46">        tvTimer = findViewById(R.id.tvTimer);</span>
+<span class="fc" id="L47">        tvSubtitle = findViewById(R.id.tvOtpSubtitle);</span>
+<span class="fc" id="L48">        progress = findViewById(R.id.progress);</span>
+
+        // Update subtitle to reflect token-based verification
+<span class="fc" id="L51">        tvSubtitle.setText(&quot;Paste the verification token sent to &quot; + email);</span>
+
+        // Your backend does not provide resend; hide these controls
+<span class="fc" id="L54">        tvResend.setVisibility(View.GONE);</span>
+<span class="fc" id="L55">        tvTimer.setVisibility(View.GONE);</span>
+
+<span class="fc" id="L57">        btnVerify.setOnClickListener(v -&gt; verifyToken());</span>
+<span class="fc" id="L58">    }</span>
+
+    private void verifyToken() {
+<span class="pc bpc" id="L61" title="1 of 2 branches missed.">        String token = etOtp.getText() != null ? etOtp.getText().toString().trim() : &quot;&quot;;</span>
+<span class="fc" id="L62">        tilOtp.setError(null);</span>
+
+<span class="pc bpc" id="L64" title="1 of 2 branches missed.">        if (token.isEmpty()) {</span>
+<span class="fc" id="L65">            tilOtp.setError(&quot;Enter the token from your email&quot;);</span>
+<span class="fc" id="L66">            return;</span>
+        }
+
+<span class="nc" id="L69">        setLoading(true);</span>
+
+        // Build URL: GET /users/verify?token=...
+<span class="nc" id="L72">        String url = Api.VERIFY + &quot;?token=&quot; + Uri.encode(token);</span>
+
+<span class="nc" id="L74">        JsonObjectRequest req = new JsonObjectRequest(</span>
+                Request.Method.GET,
+                url,
+                null,
+                response -&gt; {
+<span class="nc" id="L79">                    setLoading(false);</span>
+                    // Backend spec: { &quot;message&quot;: &quot;Email verified successfully!&quot; } or error message
+<span class="nc" id="L81">                    String msg = response.optString(&quot;message&quot;, &quot;&quot;);</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">                    if (msg.toLowerCase().contains(&quot;verified&quot;)) {</span>
+<span class="nc" id="L83">                        Toast.makeText(this, &quot;Email verified 🎉&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L84">                        finish(); // or startActivity(new Intent(this, LoginActivity.class));</span>
+                    } else {
+<span class="nc bnc" id="L86" title="All 2 branches missed.">                        tilOtp.setError(msg.isEmpty() ? &quot;Invalid or expired token&quot; : msg);</span>
+                    }
+<span class="nc" id="L88">                },</span>
+                error -&gt; {
+<span class="nc" id="L90">                    setLoading(false);</span>
+<span class="nc" id="L91">                    int status = -1;</span>
+<span class="nc" id="L92">                    String body = &quot;&quot;;</span>
+<span class="nc" id="L93">                    NetworkResponse nr = error.networkResponse;</span>
+<span class="nc bnc" id="L94" title="All 4 branches missed.">                    if (nr != null &amp;&amp; nr.data != null) {</span>
+<span class="nc" id="L95">                        status = nr.statusCode;</span>
+<span class="nc" id="L96">                        body = new String(nr.data);</span>
+                    }
+<span class="nc bnc" id="L98" title="All 2 branches missed.">                    tilOtp.setError(status == -1</span>
+<span class="nc" id="L99">                            ? &quot;Network error. Check URL/connection.&quot;</span>
+<span class="nc" id="L100">                            : &quot;Verification failed (&quot; + status + &quot;). &quot; + body);</span>
+<span class="nc" id="L101">                }</span>
+        );
+
+<span class="nc" id="L104">        Volley.newRequestQueue(this).add(req);</span>
+<span class="nc" id="L105">    }</span>
+
+    private void setLoading(boolean loading) {
+<span class="nc bnc" id="L108" title="All 2 branches missed.">        progress.setVisibility(loading ? View.VISIBLE : View.GONE);</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">        btnVerify.setEnabled(!loading);</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">        etOtp.setEnabled(!loading);</span>
+<span class="nc" id="L111">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span>Generated by the Android Gradle plugin 8.13.1</div></body></html>

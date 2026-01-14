@@ -1,0 +1,128 @@
+Live Results API Reference
+=========================
+
+Summary
+-------
+
+The Live Results API provides real-time updates for poll results via WebSocket and optional REST endpoints. All vote submissions, deletions, and poll closures trigger broadcasts to subscribers.
+
+This API supports:
+- Real-time WebSocket subscriptions to poll result updates.
+- Manual REST requests for initial or testing data.
+- Integration with front-end dashboards to display live poll results.
+- Compatibility with all poll types (Yes/No, Rating, Multiple Choice, Ranking).
+
+Base Path (REST): /live-results
+WebSocket Endpoint: /ws/live-results
+
+1. WebSocket Configuration
+--------------------------
+STOMP Endpoint:
+/ws/live-results
+
+Broker Prefixes:
+- Application destination prefix: /app
+- Topic subscription prefix: /topic
+
+CORS: * (allow all origins, for testing)
+
+2. WebSocket Subscription
+-------------------------
+Subscribe to a Poll
+
+Destination (subscribe):
+/topic/poll/{pollId}
+
+Sends updates whenever votes are cast, deleted, or the poll is closed.
+
+- pollId is the numeric ID of the poll.
+
+Initial Data (sent automatically upon subscription):
+/app/poll/{pollId}  -> /topic/poll/{pollId}
+
+This sends the latest snapshot of results to the subscriber.
+
+3. Manual Refresh via WebSocket
+-------------------------------
+Message Mapping (send-to-application):
+/app/poll/{pollId}/refresh
+
+Response (broadcast to topic):
+/topic/poll/{pollId}
+
+Optional endpoint to trigger a manual refresh.
+
+- Payload is ignored; all subscribers receive the latest poll results.
+
+4. REST Endpoints
+-----------------
+4.1 Get Poll Results (snapshot)
+GET /live-results/poll/{pollId}
+
+Response (JSON):
+{
+  "pollId": 1,
+  "status": "active",
+  "totalVotes": 25,
+  "distribution": [
+    { "optionId": 0, "count": 10, "percent": 40.0 },
+    { "optionId": 1, "count": 15, "percent": 60.0 }
+  ]
+}
+
+- pollId: ID of the poll.
+- status: "active" or "closed".
+- totalVotes: total number of votes counted.
+- distribution: list of vote counts per option.
+- optionId: numeric ID of option (Yes/No: 0=No, 1=Yes; Multiple Choice and Ranking: 0-based index)
+- count: number of votes for this option
+- percent: percentage of total votes (for Ranking polls, based on max possible Borda score)
+
+5. Data Transfer Objects (DTOs)
+-------------------------------
+LiveResultsMessage
+- pollId (Long): ID of the poll
+- status (String): "active" or "closed"
+- totalVotes (Integer): Number of votes or distinct voters (for Ranking polls)
+- distribution (List<OptionDistribution>): Vote counts and percentages per option
+
+OptionDistribution
+- optionId (Long): Option index or ID
+- count (Integer): Vote count (or Borda score for Ranking)
+- percent (Double): Vote percentage (or % of max Borda score)
+
+6. Notes on Poll Types
+-------------------------
+- Yes/No Polls: optionId = 0 (No), 1 (Yes)
+- Rating Polls: optionId = 1..5
+- Multiple Choice Polls: 0-based index of options
+- Ranking Polls: 0-based index, count = Borda score, percent = % of max possible score
+
+7. Example WebSocket Flow
+----------------------------
+Subscribe:
+STOMP subscribe /topic/poll/1
+
+Receive Initial Snapshot:
+{
+  "pollId": 1,
+  "status": "active",
+  "totalVotes": 20,
+  "distribution": [
+    {"optionId": 0, "count": 5, "percent": 25.0},
+    {"optionId": 1, "count": 15, "percent": 75.0}
+  ]
+}
+
+Manual Refresh:
+STOMP send /app/poll/1/refresh
+
+Broadcast Update:
+Same payload as above, automatically sent to /topic/poll/1.
+
+8. Integration Tips
+---------------------
+- Always subscribe to /topic/poll/{pollId} to get live updates.
+- Optionally call GET /live-results/poll/{pollId} to initialize the front-end before WebSocket connects.
+- All percentages are calculated relative to total votes or maximum Borda score.
+- Closed polls will still send results updates with "status": "closed".

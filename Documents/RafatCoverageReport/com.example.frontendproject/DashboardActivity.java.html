@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DashboardActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debug</a> &gt; <a href="index.source.html" class="el_package">com.example.frontendproject</a> &gt; <span class="el_source">DashboardActivity.java</span></div><h1>DashboardActivity.java</h1><pre class="source lang-java linenums">package com.example.frontendproject;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import android.os.Bundle;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.example.frontendproject.net.DashboardApi;
+import com.example.frontendproject.net.PollsJoinedResponse;
+import com.example.frontendproject.net.VotesCastResponse;
+import com.example.frontendproject.net.PollTypesResponse;
+import com.example.frontendproject.net.RecentActivityItem;
+import com.example.frontendproject.net.RetrofitClientInstance;
+
+import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+
+<span class="fc" id="L23">public class DashboardActivity extends AppCompatActivity {</span>
+
+    private TextView tvPollsJoined, tvVotesCast, tvPollTypesDetail, tvRecentActivity;
+    private SessionManager session;
+    private DashboardApi api;
+    private String token;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L32">        super.onCreate(savedInstanceState);</span>
+<span class="fc" id="L33">        setContentView(R.layout.activity_dashboard);</span>
+
+<span class="fc" id="L35">        tvPollsJoined = findViewById(R.id.tvPollsJoined);</span>
+<span class="fc" id="L36">        tvVotesCast = findViewById(R.id.tvVotesCast);</span>
+<span class="fc" id="L37">        tvPollTypesDetail = findViewById(R.id.tvPollTypesDetail);</span>
+<span class="fc" id="L38">        tvRecentActivity = findViewById(R.id.tvRecentActivity);</span>
+
+<span class="fc" id="L40">        session = new SessionManager(this);</span>
+<span class="fc" id="L41">        token = session.getToken();</span>
+
+<span class="pc bpc" id="L43" title="2 of 4 branches missed.">        if (token == null || token.trim().isEmpty()) {</span>
+<span class="nc" id="L44">            Toast.makeText(this, &quot;No auth token found. Please log in again.&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L45">            return;</span>
+        }
+
+
+
+<span class="fc" id="L50">        Retrofit retrofit = RetrofitClientInstance.getRetrofitInstance();</span>
+<span class="fc" id="L51">        api = retrofit.create(DashboardApi.class);</span>
+
+<span class="fc" id="L53">        loadPollsJoined();</span>
+<span class="fc" id="L54">        loadVotesCast();</span>
+<span class="fc" id="L55">        loadPollTypes();</span>
+<span class="fc" id="L56">        loadRecentActivity();</span>
+<span class="fc" id="L57">    }</span>
+
+    private void loadPollsJoined() {
+<span class="fc" id="L60">        Call&lt;PollsJoinedResponse&gt; call = api.getPollsJoined(token);</span>
+<span class="fc" id="L61">        call.enqueue(new Callback&lt;PollsJoinedResponse&gt;() {</span>
+            @Override
+            public void onResponse(Call&lt;PollsJoinedResponse&gt; call, Response&lt;PollsJoinedResponse&gt; response) {
+<span class="pc bpc" id="L64" title="2 of 4 branches missed.">                if (!response.isSuccessful() || response.body() == null) {</span>
+<span class="nc" id="L65">                    Toast.makeText(DashboardActivity.this, &quot;Polls joined failed (&quot; + response.code() + &quot;)&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L66">                    return;</span>
+                }
+<span class="fc" id="L68">                PollsJoinedResponse data = response.body();</span>
+<span class="fc" id="L69">                tvPollsJoined.setText(&quot;Polls Joined: &quot; + data.count_polls_joined);</span>
+<span class="fc" id="L70">            }</span>
+
+            @Override
+            public void onFailure(Call&lt;PollsJoinedResponse&gt; call, Throwable t) {
+<span class="nc" id="L74">                Toast.makeText(DashboardActivity.this, &quot;Error loading polls joined&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L75">            }</span>
+        });
+<span class="fc" id="L77">    }</span>
+
+    private void loadVotesCast() {
+<span class="fc" id="L80">        Call&lt;VotesCastResponse&gt; call = api.getVotesCast(token);</span>
+<span class="fc" id="L81">        call.enqueue(new Callback&lt;VotesCastResponse&gt;() {</span>
+            @Override
+            public void onResponse(Call&lt;VotesCastResponse&gt; call, Response&lt;VotesCastResponse&gt; response) {
+<span class="pc bpc" id="L84" title="2 of 4 branches missed.">                if (!response.isSuccessful() || response.body() == null) {</span>
+<span class="nc" id="L85">                    Toast.makeText(DashboardActivity.this, &quot;Votes cast failed (&quot; + response.code() + &quot;)&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L86">                    return;</span>
+                }
+<span class="fc" id="L88">                VotesCastResponse data = response.body();</span>
+<span class="fc" id="L89">                tvVotesCast.setText(&quot;Votes Cast: &quot; + data.count_votes_cast);</span>
+<span class="fc" id="L90">            }</span>
+
+            @Override
+            public void onFailure(Call&lt;VotesCastResponse&gt; call, Throwable t) {
+<span class="nc" id="L94">                Toast.makeText(DashboardActivity.this, &quot;Error loading votes cast&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L95">            }</span>
+        });
+<span class="fc" id="L97">    }</span>
+
+    private void loadPollTypes() {
+<span class="fc" id="L100">        Call&lt;PollTypesResponse&gt; call = api.getPollTypes(token);</span>
+<span class="fc" id="L101">        call.enqueue(new Callback&lt;PollTypesResponse&gt;() {</span>
+            @Override
+            public void onResponse(Call&lt;PollTypesResponse&gt; call, Response&lt;PollTypesResponse&gt; response) {
+<span class="pc bpc" id="L104" title="2 of 4 branches missed.">                if (!response.isSuccessful() || response.body() == null) {</span>
+<span class="nc" id="L105">                    Toast.makeText(DashboardActivity.this, &quot;Poll types failed (&quot; + response.code() + &quot;)&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L106">                    return;</span>
+                }
+<span class="fc" id="L108">                PollTypesResponse data = response.body();</span>
+<span class="fc" id="L109">                String typesText = &quot;Yes/No: &quot; + data.yes_no +</span>
+                        &quot;\nRating: &quot; + data.rating +
+                        &quot;\nRanking: &quot; + data.ranking +
+                        &quot;\nMCQ: &quot; + data.multiple_choice;
+<span class="fc" id="L113">                tvPollTypesDetail.setText(typesText);</span>
+<span class="fc" id="L114">            }</span>
+
+            @Override
+            public void onFailure(Call&lt;PollTypesResponse&gt; call, Throwable t) {
+<span class="nc" id="L118">                Toast.makeText(DashboardActivity.this, &quot;Error loading poll types&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L119">            }</span>
+        });
+<span class="fc" id="L121">    }</span>
+
+    private void loadRecentActivity() {
+<span class="fc" id="L124">        Call&lt;List&lt;RecentActivityItem&gt;&gt; call = api.getRecentActivity(token);</span>
+<span class="fc" id="L125">        call.enqueue(new Callback&lt;List&lt;RecentActivityItem&gt;&gt;() {</span>
+            @Override
+            public void onResponse(Call&lt;List&lt;RecentActivityItem&gt;&gt; call, Response&lt;List&lt;RecentActivityItem&gt;&gt; response) {
+<span class="nc bnc" id="L128" title="All 4 branches missed.">                if (!response.isSuccessful() || response.body() == null) {</span>
+<span class="nc" id="L129">                    tvRecentActivity.setText(&quot;No recent activity yet.&quot;);</span>
+<span class="nc" id="L130">                    return;</span>
+                }
+<span class="nc" id="L132">                List&lt;RecentActivityItem&gt; list = response.body();</span>
+<span class="nc" id="L133">                tvRecentActivity.setText(formatRecentActivity(list));</span>
+<span class="nc" id="L134">            }</span>
+
+            @Override
+            public void onFailure(Call&lt;List&lt;RecentActivityItem&gt;&gt; call, Throwable t) {
+<span class="fc" id="L138">                tvRecentActivity.setText(&quot;No recent activity yet.&quot;);</span>
+<span class="fc" id="L139">            }</span>
+        });
+<span class="fc" id="L141">    }</span>
+
+    private String formatRecentActivity(List&lt;RecentActivityItem&gt; list) {
+<span class="nc bnc" id="L144" title="All 4 branches missed.">        if (list == null || list.isEmpty()) {</span>
+<span class="nc" id="L145">            return &quot;No recent activity yet.&quot;;</span>
+        }
+<span class="nc" id="L147">        StringBuilder sb = new StringBuilder();</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">        for (RecentActivityItem item : list) {</span>
+<span class="nc bnc" id="L149" title="All 2 branches missed.">            String title = item.pollTitle != null ? item.pollTitle : &quot;Poll&quot;;</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">            String action = item.action != null ? item.action : &quot;interacted&quot;;</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">            String time = item.time != null ? item.time : &quot;&quot;;</span>
+<span class="nc" id="L152">            sb.append(&quot;• &quot;)</span>
+<span class="nc" id="L153">                    .append(action)</span>
+<span class="nc" id="L154">                    .append(&quot; on &quot;)</span>
+<span class="nc" id="L155">                    .append(title);</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">            if (!time.isEmpty()) {</span>
+<span class="nc" id="L157">                sb.append(&quot; (&quot;).append(time).append(&quot;)&quot;);</span>
+            }
+<span class="nc" id="L159">            sb.append(&quot;\n&quot;);</span>
+<span class="nc" id="L160">        }</span>
+<span class="nc" id="L161">        return sb.toString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span>Generated by the Android Gradle plugin 8.13.1</div></body></html>

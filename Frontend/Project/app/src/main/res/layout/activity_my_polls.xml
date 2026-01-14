@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="#111827">
+
+    <!-- Header -->
+    <TextView
+        android:id="@+id/tvMyPollsTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="My Polls"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#F9FAFB" />
+
+    <TextView
+        android:id="@+id/tvMyPollsSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Manage polls you created or joined"
+        android:textSize="14sp"
+        android:textColor="#9CA3AF"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Card container for the list -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="4dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="#F9FAFB">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerMyPolls"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="8dp"
+            android:clipToPadding="false"
+            android:scrollbars="vertical" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Loading indicator -->
+    <ProgressBar
+        android:id="@+id/progressMyPolls"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:visibility="gone"
+        android:indeterminateTint="#F1BE48" />
+
+</LinearLayout>

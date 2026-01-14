@@ -1,0 +1,553 @@
+Poll API Reference (Enhanced)
+==============================
+
+Summary
+-------
+The Poll API allows users to create, vote on, view results for, and close different types of polls.
+Polls can be of type Yes/No, Rating (1-5), Multiple Choice, or Ranking.
+
+ENHANCEMENT: All polls now support an optional "context" field that provides additional information
+about the poll. This context is used by the AI Chat system for better semantic search and responses.
+
+Features:
+- Users can create polls of various types with optional context
+- Users can cast votes on active polls (with location verification)
+- Users can view their own votes, including detailed ranking votes for Ranking polls
+- Users can retrieve poll results, which vary depending on poll type
+- Users can close polls to prevent further voting
+- Users can delete their own votes if they wish to retract them
+- All poll data is stored and managed through PollService and PollRepository
+- Location validation ensures votes are cast only by users within the defined campus area
+- Ranking polls support multi-vote submissions with exact ranking order
+- Context field enables AI-powered poll discovery and semantic search
+- Polls can be set to PUBLIC (viewable by all) or PRIVATE (viewable/votable only by members/owner).
+- Role-based access control: Owners, Moderators, Members
+- Moderators can edit polls, view results, and manage access
+- Owners can delete polls, assign/revoke moderators, rotate access codes
+
+Base Path: /polls
+
+----------------------------------------------------
+1. Create Yes/No Poll
+POST /polls/yesno
+
+Request Body (JSON):
+{
+  "title": "Do you like coffee?",
+  "context": "This poll is being conducted by the Student Union to determine whether we should extend the hours of the campus coffee shop. We're gathering data on daily coffee consumption habits among students, faculty, and staff. The results will directly influence our decision to keep the coffee shop open until midnight during finals week. Your participation helps us better serve the campus community's needs and preferences regarding caffeinated beverage availability.",
+  "emailId": "owner@example.com",
+  "visibility": "PUBLIC",
+   "moderators": [
+       { "moderatorEmail": "mod@campus.edu",
+          "duration": "2w" }
+     ]
+}
+
+Response (JSON):
+{
+  "id": 1,
+  "title": "Do you like coffee?",
+  "type": "YES_NO",
+  "context": "This poll is being conducted by the Student Union to determine whether we should extend the hours of the campus coffee shop. We're gathering data on daily coffee consumption habits among students, faculty, and staff. The results will directly influence our decision to keep the coffee shop open until midnight during finals week. Your participation helps us better serve the campus community's needs and preferences regarding caffeinated beverage availability.",
+  "active": true
+  "visibility": "PUBLIC",
+    "creatorEmail": "owner@example.com",
+    "accessCode": null
+}
+
+Note:
+- context field is optional
+- **emailId** (String, required) is the user creating the poll.
+- **visibility** (String, optional, default "PUBLIC") must be "PUBLIC" or "PRIVATE".
+- For PRIVATE polls, an **accessCode** will be generated and emailed to the owner.
+
+----------------------------------------------------
+2. Create Rating Poll
+POST /polls/rating
+
+Request Body (JSON):
+{
+  "title": "Rate our service (1–5)",
+  "emailId": "owner@example.com",
+  "visibility": "PRIVATE",
+  "context": "The IT Help Desk is conducting this satisfaction survey to evaluate the quality of technical support services provided to campus users during the Fall 2025 semester. We want to understand your experience with response times, problem resolution effectiveness, staff professionalism, and overall service quality. Your honest feedback will help us identify areas for improvement, allocate resources more effectively, and potentially expand support hours based on demand. This survey covers support received through phone, email, walk-in appointments, and our online ticketing system.",
+  "moderators": [
+      { "emailId": "mod@campus.edu", "duration": "2w" }
+    ]
+}
+
+Response (JSON):
+{
+  "id": 2,
+  "title": "Rate our service (1–5)",
+  "type": "RATING",
+  "context": "The IT Help Desk is conducting this satisfaction survey to evaluate the quality of technical support services provided to campus users during the Fall 2025 semester. We want to understand your experience with response times, problem resolution effectiveness, staff professionalism, and overall service quality. Your honest feedback will help us identify areas for improvement, allocate resources more effectively, and potentially expand support hours based on demand. This survey covers support received through phone, email, walk-in appointments, and our online ticketing system.",
+  "active": true,
+  "visibility": "PRIVATE",
+  "creatorEmail": "owner@example.com",
+  "accessCode": "XYZ789"
+}
+
+Note: context field is optional
+
+----------------------------------------------------
+3. Create Multiple Choice Poll
+POST /polls/multiple
+
+Request Body (JSON):
+{
+  "title": "Which color do you prefer?",
+  "options": ["Red", "Blue", "Green"],
+  "emailId": "owner@example.com",
+  "visibility": "PUBLIC",
+  "context": "The Marketing and Branding Committee is redesigning the university's visual identity system for 2026. We're seeking input from students, alumni, faculty, and staff to select the primary accent color for our new logo, website redesign, and printed materials. This color will represent our institution across all digital platforms, merchandise, athletic uniforms, and official communications for the next 5-10 years. Red represents energy and tradition, Blue represents trust and stability, and Green represents growth and sustainability. Your vote will directly influence the final design presented to the Board of Trustees.",
+  "moderators": [
+      { "emailId": "mod@campus.edu", "duration": "2w" }
+    ]
+}
+
+Response (JSON):
+{
+  "id": 3,
+  "title": "Which color do you prefer?",
+  "type": "MULTIPLE_CHOICE",
+  "options": ["Red", "Blue", "Green"],
+  "context": "The Marketing and Branding Committee is redesigning the university's visual identity system for 2026. We're seeking input from students, alumni, faculty, and staff to select the primary accent color for our new logo, website redesign, and printed materials. This color will represent our institution across all digital platforms, merchandise, athletic uniforms, and official communications for the next 5-10 years. Red represents energy and tradition, Blue represents trust and stability, and Green represents growth and sustainability. Your vote will directly influence the final design presented to the Board of Trustees.",
+  "active": true,
+  "visibility": "PUBLIC",
+  "creatorEmail": "owner@example.com",
+  "accessCode": null
+}
+
+Note: context field is optional
+
+----------------------------------------------------
+4. Create Ranking Poll
+POST /polls/ranking
+
+Request Body (JSON):
+{
+  "title": "Rank your favorite fruits",
+  "options": ["Apple", "Banana", "Orange"],
+  "emailId": "owner@example.com",
+  "visibility": "PRIVATE",
+  "context": "Dining Services is planning the Spring 2026 cafeteria menu and wants to prioritize fruit offerings based on student preferences. We purchase fresh fruit weekly and need to optimize our inventory to reduce waste while ensuring popular items are always available. Your rankings will help us determine order quantities, featured items in grab-and-go sections, and which fruits to include in meal plans. We're also considering adding a fresh juice bar, and these results will influence which juice combinations we offer. Please rank based on your actual consumption preferences, considering taste, nutritional value, and how often you would choose each option.",
+  "moderators": [
+      { "emailId": "mod@campus.edu", "duration": "2w" }
+    ]
+}
+
+Response (JSON):
+{
+  "id": 4,
+  "title": "Rank your favorite fruits",
+  "type": "RANKING",
+  "options": ["Apple", "Banana", "Orange"],
+  "context": "Dining Services is planning the Spring 2026 cafeteria menu and wants to prioritize fruit offerings based on student preferences. We purchase fresh fruit weekly and need to optimize our inventory to reduce waste while ensuring popular items are always available. Your rankings will help us determine order quantities, featured items in grab-and-go sections, and which fruits to include in meal plans. We're also considering adding a fresh juice bar, and these results will influence which juice combinations we offer. Please rank based on your actual consumption preferences, considering taste, nutritional value, and how often you would choose each option.",
+  "active": true,
+  "visibility": "PRIVATE",
+  "creatorEmail": "owner@example.com",
+  "accessCode": "ABC123"
+}
+
+Note: context field is optional
+
+----------------------------------------------------
+5. Get All Polls
+GET /polls
+
+Query Parameters:
+- **emailId** (String, optional): The user's email ID.
+
+Response (JSON):
+[
+  {
+    "id": 1,
+    "title": "Do you like coffee?",
+    "type": "YES_NO",
+    "context": "...",
+    "active": true,
+    "visibility": "PUBLIC"
+  },
+  ...
+]
+
+Note:
+- If emailId is provided, returns all PUBLIC polls + all PRIVATE polls the user is a member of (including owner).
+- If emailId is not provided, returns only PUBLIC polls.
+
+----------------------------------------------------
+6. Get Poll by ID
+GET /polls/{id}
+
+Path Variables:
+- **id** (Long, required): Poll ID.
+
+Query Parameters:
+- **emailId** (String, optional): The user's email ID. Required if the poll is PRIVATE.
+
+Response (JSON):
+{
+  "id": 1,
+  "title": "Do you like coffee?",
+  ...
+}
+OR
+{"error": "Access denied. Not a member of this poll."}
+
+Note:
+- For PRIVATE polls, the request must include the emailId, and the user must be a member or the owner.
+
+----------------------------------------------------
+7. Cast a Vote (Yes/No, Rating, Multiple Choice)
+POST /polls/{pollId}/vote
+
+Path Variables:
+- **pollId** (Long, required): Poll ID.
+
+Query Parameters:
+- **userId** (String, required): The voter's email ID.
+- **numericValue** (Integer, optional): For YES/NO (e.g., 1/0) or RATING.
+- **choice** (String, optional): For MULTIPLE_CHOICE.
+
+Request Body (JSON):
+{
+  "lat": 40.7128,
+  "lng": -74.0060
+}
+
+Response (JSON):
+{"message": "Vote added"}
+OR
+{"error": "..."}
+
+Note:
+- User must provide **either** `numericValue` or `choice` as a query parameter.
+- For PRIVATE polls, user must be a member or the owner to vote.
+
+----------------------------------------------------
+8. Submit Ranking Votes (Ranking Polls Only)
+POST /polls/{pollId}/vote/ranking
+
+Path Variables:
+- **pollId** (Long, required): Poll ID.
+
+Query Parameters:
+- **userId** (String, required): The voter's email ID.
+
+Request Body (JSON):
+[
+  { "choice": "Apple", "rank": 1, "lat": 40.7128, "lng": -74.0060 },
+  { "choice": "Banana", "rank": 2, "lat": 40.7128, "lng": -74.0060 },
+  { "choice": "Orange", "rank": 3, "lat": 40.7128, "lng": -74.0060 }
+]
+
+Response (JSON):
+{"message": "Ranking submitted"}
+OR
+{"error": "..."}
+
+Note:
+- All options must be ranked exactly once (ranks 1 to N).
+- Location data (lat, lng) is required in at least the first VoteRequest entry for verification.
+- For **PRIVATE** polls, user must be a member or the owner to vote.
+
+----------------------------------------------------
+9. Get User's Vote
+GET /polls/{pollId}/user/{userId}
+
+Path Variables:
+- **pollId** (Long, required): Poll ID.
+- **userId** (String, required): The user's email ID.
+
+Response (JSON) - Non-Ranking Polls:
+{
+  "id": 101,
+  "userId": "user@example.com",
+  "choice": "Yes",
+  "numericValue": 1,
+  "rank": null
+}
+
+Response (JSON) - Ranking Polls:
+{
+  "pollId": 4,
+  "userId": "user@example.com",
+  "ranking": [
+    { "choice": "Apple", "rank": 1 },
+    { "choice": "Banana", "rank": 2 }
+  ]
+}
+
+Response (JSON) - Not Voted:
+{"message": "User has not voted on this poll yet."}
+
+----------------------------------------------------
+10. Get Poll Results
+GET /polls/{pollId}/results
+
+Path Variables:
+- **pollId** (Long, required): Poll ID.
+
+Query Parameters:
+- **emailId** (String, optional): The user's email ID. **Required** if the poll is PRIVATE. <-- NEW: Access check parameter
+
+Response (JSON) - RANKING (Borda Count/Scoring Method): <-- NEW: Ranking results structure added
+{
+  "totalVotes": 5,
+  "scores": [
+    { "choice": "Apple", "score": 25 },
+    { "choice": "Banana", "score": 10 },
+    { "choice": "Orange", "score": 5 }
+  ]
+}
+
+Note:
+- Access to results for PRIVATE polls is restricted to members/owners.
+
+----------------------------------------------------
+11. Close Poll
+PUT /polls/{pollId}/close
+
+Path Variables:
+- **pollId** (Long, required): Poll ID.
+
+Response (JSON):
+{"message": "poll closed"}
+
+Note:
+- Sets the poll's 'active' status to **false**, preventing further votes.
+- Triggers a live results broadcast.
+
+----------------------------------------------------
+12. Delete User's Vote
+DELETE /polls/{pollId}/user/{userId}
+
+Path Variables:
+- **pollId** (Long, required): Poll ID.
+- **userId** (String, required): The voter's email ID.
+
+Response (JSON):
+{"message": "Vote deleted"}
+OR
+{"error": "Vote not found"}
+
+Note:
+- Deletes vote(s) for the specified user, including all associated ranking votes.
+- Triggers a live results broadcast.
+
+----------------------------------------------------
+13. Join Private Poll
+POST /polls/join
+
+Request Body (JSON):
+{
+  "code": "ABC123",
+  "emailId": "user@example.com"
+}
+
+Response (JSON):
+{
+  "pollId": 4,
+  "title": "Rank your favorite fruits",
+  "visibility": "PRIVATE"
+}
+OR
+{"error": "Invalid access code."}
+
+Note:
+- Adds the user as a member of the private poll, granting voting and viewing rights.
+
+----------------------------------------------------
+14. Rotate Private Poll Access Code
+POST /polls/{pollId}/rotate-code
+
+Path Variables:
+- **pollId** (Long, required): Poll ID.
+
+Request Body (JSON):
+{
+  "emailId": "owner@example.com"
+}
+
+Response (JSON):
+{"accessCode": "NEW_CODE78"}
+OR
+{"error": "Only poll owner can rotate access code."}
+
+Note:
+- Only the poll owner can use this endpoint. A new access code is generated and emailed to the owner.
+
+----------------------------------------------------
+15. Get Private Poll Access Code
+GET /polls/{pollId}/access-code
+
+Path Variables:
+- **pollId** (Long, required): Poll ID.
+
+Query Parameters:
+- **emailId** (String, required): The owner's email ID.
+
+Response (JSON):
+{"accessCode": "ABC123"}
+OR
+{"error": "Access denied: only poll owner can retrieve the code"}
+
+Note:
+- Only the poll owner can retrieve the access code.
+-----------------------------------------------------
+
+16. Edit Poll (Title, Context)
+PUT /polls/{pollId}/edit
+
+Query Params:
+- **emailId** (required): owner or moderator
+
+Request Body:
+{
+  "title": "Updated title",
+  "context": "New context"
+}
+
+Response:
+{
+  "message": "Poll updated successfully",
+  "pollId": 1,
+  "title": "Updated title",
+  "type": "MULTIPLE_CHOICE"
+}
+
+Note:
+- **Only owner or active moderator** can edit
+- Embedding is regenerated automatically
+- 403 if not authorized
+
+----------------------------------------------------
+17. Delete Poll
+DELETE /polls/{pollId}?emailId=owner@example.com
+
+Response:
+{"message": "Poll deleted successfully"}
+OR
+{"error": "Access denied: only poll owner can delete"}
+
+Note:
+- **Only owner** can delete
+- Deletes all votes, moderators, windows
+
+----------------------------------------------------
+
+
+----------------------------------------------------
+19. Remove Moderator
+DELETE /polls/{pollId}/moderators/mod@campus.edu?emailId=owner@example.com
+
+→ **Only owner**
+
+----------------------------------------------------
+20. List Moderators
+GET /polls/{pollId}/moderators?emailId=owner@example.com
+
+Response:
+{
+  "moderators": [
+    {
+      "moderatorEmail": "mod@campus.edu",
+      "assignedAt": "2025-11-07T10:00:00",
+      "expiresAt": "2025-11-21T10:00:00",
+      "isForeverAccess": false,
+      "isCurrentlyValid": true
+    }
+  ]
+}
+
+→ **Only owner**
+
+----------------------------------------------------
+21. Get User’s Accessible Polls
+GET /polls/user/user@example.com/accessible
+
+Response:
+{
+  "polls": [
+    {
+      "pollId": 1,
+      "title": "Coffee Poll",
+      "type": "YES_NO",
+      "role": "OWNER",
+      "visibility": "PUBLIC",
+      "isActive": true
+    },
+    {
+      "pollId": 4,
+      "title": "Fruit Ranking",
+      "type": "RANKING",
+      "role": "MODERATOR",
+      "visibility": "PRIVATE",
+      "moderatorExpiresAt": "2025-12-01T00:00:00",
+      "isForeverAccess": false
+    }
+  ]
+}
+
+----------------------------------------------------
+22. Check Access Level
+GET /polls/{pollId}/access-level?emailId=user@example.com
+
+Response:
+{
+  "pollId": 1,
+  "userEmail": "user@example.com",
+  "role": "MODERATOR",
+  "canEdit": true,
+  "canDelete": false,
+  "isOwner": false,
+  "isModerator": true
+}
+
+----------------------------------------------------
+ENHANCEMENTS SUMMARY
+----------------------------------------------------
+
+Context Field:
+- All poll types now support an optional "context" field
+- Context provides additional information about the poll's purpose
+- Context is included in semantic embeddings for AI search
+- Context appears in poll listings and AI chat responses
+- Context field can be null if not provided during creation
+
+AI Integration:
+- All polls are automatically embedded when created
+- Embeddings use sentence-transformers/all-MiniLM-L6-v2 model
+- 384-dimensional vectors stored as JSON in database
+- Context field included in text representation for embedding
+- Enables semantic search through Chat API
+
+Text Representation for Embedding:
+The system generates text representations including:
+- Poll ID
+- Title
+- Type (YES_NO, RATING, MULTIPLE_CHOICE, RANKING)
+- Active status
+- Options (for Multiple Choice and Ranking polls)
+- Context (if provided)
+
+Example:
+"Poll ID: 5, Title: "What's your favorite color?", Type: MULTIPLE_CHOICE,
+Active: true, Options: [Red, Blue, Green], Context: Logo design survey"
+
+Live Results Broadcasting:
+- Vote submissions trigger live result updates via WebSocket
+- Poll closure triggers status update broadcast
+- Vote deletions trigger result recalculation broadcast
+- See LiveResults API documentation for details
+
+----------------------------------------------------
+BACKWARD COMPATIBILITY
+----------------------------------------------------
+
+All existing poll endpoints remain fully functional:
+- Polls created without context field work normally
+- Context field returns null for polls without context
+- All voting, results, and management endpoints unchanged
+- No breaking changes to existing integrations

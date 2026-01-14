@@ -1,0 +1,605 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > DiscussionService</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.LiveDiscussion.service</a>
+</div>
+
+<h1>Coverage Summary for Class: DiscussionService (onetoone.LiveDiscussion.service)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">DiscussionService</td>
+<td class="coverageStat">
+  <span class="percent">
+    9.5%
+  </span>
+  <span class="absValue">
+    (2/21)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/112)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    1%
+  </span>
+  <span class="absValue">
+    (2/193)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">DiscussionService$$SpringCGLIB$$0</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    9.5%
+  </span>
+  <span class="absValue">
+    (2/21)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/112)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    1%
+  </span>
+  <span class="absValue">
+    (2/193)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.LiveDiscussion.service;
+&nbsp;
+&nbsp;import onetoone.LiveDiscussion.model.*;
+&nbsp;import onetoone.LiveDiscussion.repository.DiscussionRepository;
+&nbsp;import onetoone.Polling.model.Poll;
+&nbsp;import onetoone.Polling.repository.PollRepository;
+&nbsp;import onetoone.Users.model.Users;
+&nbsp;import onetoone.Users.repository.UserRepository;
+&nbsp;import org.slf4j.Logger;
+&nbsp;import org.slf4j.LoggerFactory;
+&nbsp;import org.springframework.beans.factory.annotation.Autowired;
+&nbsp;import org.springframework.stereotype.Service;
+&nbsp;import org.springframework.transaction.annotation.Transactional;
+&nbsp;
+&nbsp;import jakarta.persistence.EntityManager;
+&nbsp;import jakarta.persistence.PersistenceContext;
+&nbsp;import java.time.LocalDateTime;
+&nbsp;import java.util.*;
+&nbsp;import java.util.stream.Collectors;
+&nbsp;
+&nbsp;@Service
+<b class="fc">&nbsp;public class DiscussionService {</b>
+&nbsp;
+<b class="fc">&nbsp;    private static final Logger log = LoggerFactory.getLogger(DiscussionService.class);</b>
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private DiscussionRepository discussionRepository;
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private PollRepository pollRepository;
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private UserRepository userRepository;
+&nbsp;
+&nbsp;    @PersistenceContext
+&nbsp;    private EntityManager entityManager;
+&nbsp;
+&nbsp;    private static final int MAX_PARTICIPANTS = 100;
+&nbsp;    private static final int MAX_MESSAGE_LENGTH = 2000;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Create a poll-specific discussion
+&nbsp;     */
+&nbsp;    @Transactional
+&nbsp;    public Discussion createPollDiscussion(Long pollId, String title, String description, String userEmail) {
+&nbsp;        // Validate poll exists
+<b class="nc">&nbsp;        Poll poll = pollRepository.findById(pollId)</b>
+<b class="nc">&nbsp;                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Poll not found&quot;));</b>
+&nbsp;
+&nbsp;        // Check if discussion already exists for this poll
+<b class="nc">&nbsp;        Optional&lt;Discussion&gt; existing = discussionRepository.findByPollId(pollId);</b>
+<b class="nc">&nbsp;        if (existing.isPresent()) {</b>
+<b class="nc">&nbsp;            throw new IllegalArgumentException(&quot;Discussion already exists for this poll&quot;);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Get user
+<b class="nc">&nbsp;        Users user = userRepository.findByEmailId(userEmail);</b>
+<b class="nc">&nbsp;        if (user == null) {</b>
+<b class="nc">&nbsp;            throw new IllegalArgumentException(&quot;User not found&quot;);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Create discussion
+<b class="nc">&nbsp;        Discussion discussion = new Discussion(title, description, DiscussionType.POLL_DISCUSSION, user);</b>
+<b class="nc">&nbsp;        discussion.setPoll(poll);</b>
+<b class="nc">&nbsp;        discussion = discussionRepository.save(discussion);</b>
+&nbsp;
+&nbsp;        // Add host as participant using EntityManager
+<b class="nc">&nbsp;        DiscussionParticipant hostParticipant = new DiscussionParticipant(discussion, user, true);</b>
+<b class="nc">&nbsp;        entityManager.persist(hostParticipant);</b>
+<b class="nc">&nbsp;        entityManager.flush();</b>
+&nbsp;
+<b class="nc">&nbsp;        log.info(&quot;Created poll discussion {} for poll {}&quot;, discussion.getId(), pollId);</b>
+<b class="nc">&nbsp;        return discussion;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Create a general discussion
+&nbsp;     */
+&nbsp;    @Transactional
+&nbsp;    public Discussion createGeneralDiscussion(String title, String description, List&lt;String&gt; tags, String userEmail) {
+<b class="nc">&nbsp;        if (title == null || title.trim().isEmpty()) {</b>
+<b class="nc">&nbsp;            throw new IllegalArgumentException(&quot;Title is required&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        Users user = userRepository.findByEmailId(userEmail);</b>
+<b class="nc">&nbsp;        if (user == null) {</b>
+<b class="nc">&nbsp;            throw new IllegalArgumentException(&quot;User not found&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        Discussion discussion = new Discussion(title, description, DiscussionType.GENERAL_DISCUSSION, user);</b>
+<b class="nc">&nbsp;        if (tags != null &amp;&amp; !tags.isEmpty()) {</b>
+<b class="nc">&nbsp;            discussion.setTags(tags);</b>
+&nbsp;        }
+<b class="nc">&nbsp;        discussion = discussionRepository.save(discussion);</b>
+&nbsp;
+&nbsp;        // Add host as participant
+<b class="nc">&nbsp;        DiscussionParticipant hostParticipant = new DiscussionParticipant(discussion, user, true);</b>
+<b class="nc">&nbsp;        entityManager.persist(hostParticipant);</b>
+<b class="nc">&nbsp;        entityManager.flush();</b>
+&nbsp;
+<b class="nc">&nbsp;        log.info(&quot;Created general discussion {} by user {}&quot;, discussion.getId(), userEmail);</b>
+<b class="nc">&nbsp;        return discussion;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get all discussions with optional filters
+&nbsp;     */
+&nbsp;    public List&lt;Discussion&gt; getAllDiscussions(DiscussionType type, Boolean active, Long pollId, String tags) {
+<b class="nc">&nbsp;        if (pollId != null) {</b>
+<b class="nc">&nbsp;            return discussionRepository.findByPollId(pollId).map(List::of).orElse(Collections.emptyList());</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        if (type != null &amp;&amp; active != null) {</b>
+<b class="nc">&nbsp;            return discussionRepository.findByTypeAndActive(type, active);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        if (type != null) {</b>
+<b class="nc">&nbsp;            return discussionRepository.findByType(type);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        if (active != null) {</b>
+<b class="nc">&nbsp;            return discussionRepository.findByActive(active);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        if (tags != null &amp;&amp; !tags.isEmpty()) {</b>
+<b class="nc">&nbsp;            String[] tagArray = tags.split(&quot;,&quot;);</b>
+<b class="nc">&nbsp;            Set&lt;Discussion&gt; result = new HashSet&lt;&gt;();</b>
+<b class="nc">&nbsp;            for (String tag : tagArray) {</b>
+<b class="nc">&nbsp;                result.addAll(discussionRepository.findByTag(tag.trim()));</b>
+&nbsp;            }
+<b class="nc">&nbsp;            return new ArrayList&lt;&gt;(result);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return discussionRepository.findAll();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Transactional(readOnly = true)
+&nbsp;    public Discussion getDiscussionById(Long discussionId) {
+<b class="nc">&nbsp;        return discussionRepository.findByIdWithDetails(discussionId)</b>
+<b class="nc">&nbsp;                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Discussion not found&quot;));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Transactional(readOnly = true)
+&nbsp;    public List&lt;DiscussionParticipant&gt; getParticipants(Long discussionId) {
+<b class="nc">&nbsp;        return discussionRepository.findActiveParticipantsByDiscussionId(discussionId);</b>
+&nbsp;    }
+&nbsp;    /**
+&nbsp;     * Join a discussion
+&nbsp;     */
+&nbsp;    @Transactional
+&nbsp;    public void joinDiscussion(Long discussionId, String userEmail) {
+<b class="nc">&nbsp;        Discussion discussion = getDiscussionById(discussionId);</b>
+&nbsp;
+<b class="nc">&nbsp;        if (!discussion.isActive()) {</b>
+<b class="nc">&nbsp;            throw new IllegalStateException(&quot;Discussion is closed&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        Users user = userRepository.findByEmailId(userEmail);</b>
+<b class="nc">&nbsp;        if (user == null) {</b>
+<b class="nc">&nbsp;            throw new IllegalArgumentException(&quot;User not found&quot;);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Check if already a participant
+<b class="nc">&nbsp;        Optional&lt;DiscussionParticipant&gt; existing =</b>
+<b class="nc">&nbsp;                discussionRepository.findParticipantByDiscussionAndUser(discussionId, userEmail);</b>
+<b class="nc">&nbsp;        if (existing.isPresent()) {</b>
+<b class="nc">&nbsp;            throw new IllegalArgumentException(&quot;Already joined this discussion&quot;);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Check participant limit
+<b class="nc">&nbsp;        long participantCount = discussionRepository.countActiveParticipants(discussionId);</b>
+<b class="nc">&nbsp;        if (participantCount &gt;= MAX_PARTICIPANTS) {</b>
+<b class="nc">&nbsp;            throw new IllegalStateException(&quot;Discussion has reached maximum participant limit&quot;);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Add participant
+<b class="nc">&nbsp;        DiscussionParticipant participant = new DiscussionParticipant(discussion, user, false);</b>
+<b class="nc">&nbsp;        entityManager.persist(participant);</b>
+&nbsp;
+&nbsp;        // Update last activity
+<b class="nc">&nbsp;        discussion.setLastActivity(LocalDateTime.now());</b>
+<b class="nc">&nbsp;        discussionRepository.save(discussion);</b>
+&nbsp;
+<b class="nc">&nbsp;        entityManager.flush();</b>
+&nbsp;
+<b class="nc">&nbsp;        log.info(&quot;User {} joined discussion {}&quot;, userEmail, discussionId);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Leave a discussion
+&nbsp;     */
+&nbsp;    @Transactional
+&nbsp;    public void leaveDiscussion(Long discussionId, String userEmail) {
+<b class="nc">&nbsp;        DiscussionParticipant participant = discussionRepository</b>
+<b class="nc">&nbsp;                .findParticipantByDiscussionAndUser(discussionId, userEmail)</b>
+<b class="nc">&nbsp;                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Not a participant in this discussion&quot;));</b>
+&nbsp;
+&nbsp;        // Prevent host from leaving
+<b class="nc">&nbsp;        if (participant.isHost()) {</b>
+<b class="nc">&nbsp;            throw new IllegalStateException(&quot;Host cannot leave the discussion. Please close or delete the discussion instead.&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        participant.setLeftAt(LocalDateTime.now());</b>
+<b class="nc">&nbsp;        participant.setOnline(false);</b>
+<b class="nc">&nbsp;        entityManager.merge(participant);</b>
+<b class="nc">&nbsp;        entityManager.flush();</b>
+&nbsp;
+<b class="nc">&nbsp;        log.info(&quot;User {} left discussion {}&quot;, userEmail, discussionId);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get messages in a discussion with pagination
+&nbsp;     */
+&nbsp;    public List&lt;DiscussionMessage&gt; getMessages(Long discussionId, Integer limit, Long before, Long after) {
+<b class="nc">&nbsp;        if (limit == null) {</b>
+<b class="nc">&nbsp;            limit = 50;</b>
+&nbsp;        }
+<b class="nc">&nbsp;        if (limit &gt; 200) {</b>
+<b class="nc">&nbsp;            limit = 200;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        List&lt;DiscussionMessage&gt; messages;
+&nbsp;
+<b class="nc">&nbsp;        if (before != null) {</b>
+<b class="nc">&nbsp;            messages = discussionRepository.findMessagesBeforeId(discussionId, before);</b>
+<b class="nc">&nbsp;        } else if (after != null) {</b>
+<b class="nc">&nbsp;            messages = discussionRepository.findMessagesAfterId(discussionId, after);</b>
+&nbsp;        } else {
+<b class="nc">&nbsp;            messages = discussionRepository.findMessagesByDiscussionId(discussionId);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Apply limit
+<b class="nc">&nbsp;        return messages.stream().limit(limit).collect(Collectors.toList());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Save a message (called from WebSocket handler)
+&nbsp;     */
+&nbsp;    @Transactional
+&nbsp;    public DiscussionMessage saveMessage(Long discussionId, String senderEmail,
+&nbsp;                                         String content, MessageType messageType,
+&nbsp;                                         String recipientEmail) {
+<b class="nc">&nbsp;        Discussion discussion = getDiscussionById(discussionId);</b>
+<b class="nc">&nbsp;        Users sender = userRepository.findByEmailId(senderEmail);</b>
+&nbsp;
+<b class="nc">&nbsp;        if (sender == null) {</b>
+<b class="nc">&nbsp;            throw new IllegalArgumentException(&quot;Sender not found&quot;);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Validate sender is a participant
+<b class="nc">&nbsp;        Optional&lt;DiscussionParticipant&gt; participant =</b>
+<b class="nc">&nbsp;                discussionRepository.findParticipantByDiscussionAndUser(discussionId, senderEmail);</b>
+<b class="nc">&nbsp;        if (participant.isEmpty()) {</b>
+<b class="nc">&nbsp;            throw new IllegalArgumentException(&quot;User is not a participant in this discussion&quot;);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Validate content length
+<b class="nc">&nbsp;        if (content == null || content.trim().isEmpty()) {</b>
+<b class="nc">&nbsp;            throw new IllegalArgumentException(&quot;Message content cannot be empty&quot;);</b>
+&nbsp;        }
+<b class="nc">&nbsp;        if (content.length() &gt; MAX_MESSAGE_LENGTH) {</b>
+<b class="nc">&nbsp;            throw new IllegalArgumentException(&quot;Message exceeds maximum length of &quot; + MAX_MESSAGE_LENGTH);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Create message
+<b class="nc">&nbsp;        DiscussionMessage message = new DiscussionMessage(discussion, sender, content, messageType);</b>
+<b class="nc">&nbsp;        if (messageType == MessageType.DIRECT_MESSAGE &amp;&amp; recipientEmail != null) {</b>
+<b class="nc">&nbsp;            message.setRecipientEmail(recipientEmail);</b>
+&nbsp;        }
+<b class="nc">&nbsp;        entityManager.persist(message);</b>
+&nbsp;
+&nbsp;        // Update discussion last activity
+<b class="nc">&nbsp;        discussion.setLastActivity(LocalDateTime.now());</b>
+<b class="nc">&nbsp;        discussionRepository.save(discussion);</b>
+&nbsp;
+&nbsp;        // Update participant last seen
+<b class="nc">&nbsp;        DiscussionParticipant p = participant.get();</b>
+<b class="nc">&nbsp;        p.setLastSeen(LocalDateTime.now());</b>
+<b class="nc">&nbsp;        entityManager.merge(p);</b>
+&nbsp;
+<b class="nc">&nbsp;        entityManager.flush();</b>
+&nbsp;
+<b class="nc">&nbsp;        log.info(&quot;Message {} saved in discussion {} by user {}&quot;,</b>
+<b class="nc">&nbsp;                message.getId(), discussionId, senderEmail);</b>
+&nbsp;
+<b class="nc">&nbsp;        return message;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Close a discussion (only host can close)
+&nbsp;     */
+&nbsp;    @Transactional
+&nbsp;    public void closeDiscussion(Long discussionId, String userEmail) {
+<b class="nc">&nbsp;        Discussion discussion = getDiscussionById(discussionId);</b>
+&nbsp;
+&nbsp;        // Check if user is host
+<b class="nc">&nbsp;        Boolean isHostResult = discussionRepository.isUserHostOfDiscussion(discussionId, userEmail);</b>
+<b class="nc">&nbsp;        boolean isHost = isHostResult != null &amp;&amp; isHostResult;</b>
+&nbsp;
+<b class="nc">&nbsp;        if (!isHost) {</b>
+<b class="nc">&nbsp;            throw new IllegalArgumentException(&quot;Only the host can close this discussion&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        if (!discussion.isActive()) {</b>
+<b class="nc">&nbsp;            throw new IllegalStateException(&quot;Discussion already closed&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        discussion.setActive(false);</b>
+<b class="nc">&nbsp;        discussion.setClosedAt(LocalDateTime.now());</b>
+<b class="nc">&nbsp;        discussionRepository.save(discussion);</b>
+&nbsp;
+<b class="nc">&nbsp;        log.info(&quot;Discussion {} closed by host {}&quot;, discussionId, userEmail);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Delete a discussion (only host can delete)
+&nbsp;     */
+&nbsp;    @Transactional
+&nbsp;    public void deleteDiscussion(Long discussionId, String userEmail) {
+<b class="nc">&nbsp;        Discussion discussion = getDiscussionById(discussionId);</b>
+&nbsp;
+&nbsp;        // Check if user is host
+<b class="nc">&nbsp;        Boolean isHostResult = discussionRepository.isUserHostOfDiscussion(discussionId, userEmail);</b>
+<b class="nc">&nbsp;        boolean isHost = isHostResult != null &amp;&amp; isHostResult;</b>
+&nbsp;
+<b class="nc">&nbsp;        if (!isHost) {</b>
+<b class="nc">&nbsp;            throw new IllegalArgumentException(&quot;Only the host can delete this discussion&quot;);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Delete all messages
+<b class="nc">&nbsp;        List&lt;DiscussionMessage&gt; messages = discussionRepository.findMessagesByDiscussionId(discussionId);</b>
+<b class="nc">&nbsp;        for (DiscussionMessage msg : messages) {</b>
+<b class="nc">&nbsp;            entityManager.remove(msg);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Delete all participants
+<b class="nc">&nbsp;        List&lt;DiscussionParticipant&gt; participants = discussionRepository.findAllParticipantsByDiscussionId(discussionId);</b>
+<b class="nc">&nbsp;        for (DiscussionParticipant p : participants) {</b>
+<b class="nc">&nbsp;            entityManager.remove(p);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Delete discussion
+<b class="nc">&nbsp;        discussionRepository.delete(discussion);</b>
+<b class="nc">&nbsp;        entityManager.flush();</b>
+&nbsp;
+<b class="nc">&nbsp;        log.info(&quot;Discussion {} deleted by host {}&quot;, discussionId, userEmail);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get discussions by user (hosted or participating)
+&nbsp;     */
+&nbsp;    public Map&lt;String, List&lt;Discussion&gt;&gt; getUserDiscussions(String userEmail, String role, Boolean active) {
+<b class="nc">&nbsp;        Map&lt;String, List&lt;Discussion&gt;&gt; result = new HashMap&lt;&gt;();</b>
+&nbsp;
+<b class="nc">&nbsp;        if (role == null || role.equals(&quot;HOST&quot;) || role.equals(&quot;ALL&quot;)) {</b>
+<b class="nc">&nbsp;            List&lt;Discussion&gt; hosted = discussionRepository.findByHostUserEmail(userEmail);</b>
+<b class="nc">&nbsp;            if (active != null) {</b>
+<b class="nc">&nbsp;                hosted = hosted.stream()</b>
+<b class="nc">&nbsp;                        .filter(d -&gt; d.isActive() == active)</b>
+<b class="nc">&nbsp;                        .collect(Collectors.toList());</b>
+&nbsp;            }
+<b class="nc">&nbsp;            result.put(&quot;hosted&quot;, hosted);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        if (role == null || role.equals(&quot;PARTICIPANT&quot;) || role.equals(&quot;ALL&quot;)) {</b>
+<b class="nc">&nbsp;            List&lt;DiscussionParticipant&gt; participants = discussionRepository.findActiveParticipantsByUserEmail(userEmail);</b>
+<b class="nc">&nbsp;            List&lt;Discussion&gt; participating = participants.stream()</b>
+<b class="nc">&nbsp;                    .map(DiscussionParticipant::getDiscussion)</b>
+<b class="nc">&nbsp;                    .filter(d -&gt; !d.getHostUser().getEmailId().equals(userEmail)) // Exclude hosted</b>
+<b class="nc">&nbsp;                    .collect(Collectors.toList());</b>
+&nbsp;
+<b class="nc">&nbsp;            if (active != null) {</b>
+<b class="nc">&nbsp;                participating = participating.stream()</b>
+<b class="nc">&nbsp;                        .filter(d -&gt; d.isActive() == active)</b>
+<b class="nc">&nbsp;                        .collect(Collectors.toList());</b>
+&nbsp;            }
+<b class="nc">&nbsp;            result.put(&quot;participating&quot;, participating);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return result;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Search discussions
+&nbsp;     */
+&nbsp;    public List&lt;Discussion&gt; searchDiscussions(String query, DiscussionType type, String tags) {
+<b class="nc">&nbsp;        List&lt;Discussion&gt; results = discussionRepository.searchDiscussions(query);</b>
+&nbsp;
+<b class="nc">&nbsp;        if (type != null) {</b>
+<b class="nc">&nbsp;            results = results.stream()</b>
+<b class="nc">&nbsp;                    .filter(d -&gt; d.getType() == type)</b>
+<b class="nc">&nbsp;                    .collect(Collectors.toList());</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        if (tags != null &amp;&amp; !tags.isEmpty()) {</b>
+<b class="nc">&nbsp;            String[] tagArray = tags.split(&quot;,&quot;);</b>
+<b class="nc">&nbsp;            Set&lt;String&gt; searchTags = new HashSet&lt;&gt;(Arrays.asList(tagArray));</b>
+<b class="nc">&nbsp;            results = results.stream()</b>
+<b class="nc">&nbsp;                    .filter(d -&gt; d.getTags().stream().anyMatch(searchTags::contains))</b>
+<b class="nc">&nbsp;                    .collect(Collectors.toList());</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return results;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Update participant online status
+&nbsp;     */
+&nbsp;    @Transactional
+&nbsp;    public void updateParticipantStatus(Long discussionId, String userEmail, boolean online) {
+<b class="nc">&nbsp;        Optional&lt;DiscussionParticipant&gt; participantOpt =</b>
+<b class="nc">&nbsp;                discussionRepository.findParticipantByDiscussionAndUser(discussionId, userEmail);</b>
+&nbsp;
+<b class="nc">&nbsp;        if (participantOpt.isPresent()) {</b>
+<b class="nc">&nbsp;            DiscussionParticipant participant = participantOpt.get();</b>
+<b class="nc">&nbsp;            participant.setOnline(online);</b>
+<b class="nc">&nbsp;            participant.setLastSeen(LocalDateTime.now());</b>
+<b class="nc">&nbsp;            entityManager.merge(participant);</b>
+<b class="nc">&nbsp;            entityManager.flush();</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get participant count for a discussion
+&nbsp;     */
+&nbsp;    public long getParticipantCount(Long discussionId) {
+<b class="nc">&nbsp;        return discussionRepository.countActiveParticipants(discussionId);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get message count for a discussion
+&nbsp;     */
+&nbsp;    public long getMessageCount(Long discussionId) {
+<b class="nc">&nbsp;        return discussionRepository.countMessagesByDiscussionId(discussionId);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Check if user is participant
+&nbsp;     */
+&nbsp;    public boolean isParticipant(Long discussionId, String userEmail) {
+<b class="nc">&nbsp;        return discussionRepository.findParticipantByDiscussionAndUser(discussionId, userEmail).isPresent();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Check if user is host
+&nbsp;     */
+&nbsp;    public boolean isHost(Long discussionId, String userEmail) {
+<b class="nc">&nbsp;        Boolean result = discussionRepository.isUserHostOfDiscussion(discussionId, userEmail);</b>
+<b class="nc">&nbsp;        return result != null &amp;&amp; result;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Cleanup stale online statuses (called periodically)
+&nbsp;     */
+&nbsp;    @Transactional
+&nbsp;    public void cleanupStaleOnlineStatuses() {
+<b class="nc">&nbsp;        LocalDateTime threshold = LocalDateTime.now().minusMinutes(5);</b>
+<b class="nc">&nbsp;        List&lt;DiscussionParticipant&gt; staleParticipants =</b>
+<b class="nc">&nbsp;                discussionRepository.findStaleOnlineParticipants(threshold);</b>
+&nbsp;
+<b class="nc">&nbsp;        for (DiscussionParticipant participant : staleParticipants) {</b>
+<b class="nc">&nbsp;            participant.setOnline(false);</b>
+<b class="nc">&nbsp;            entityManager.merge(participant);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        if (!staleParticipants.isEmpty()) {</b>
+<b class="nc">&nbsp;            entityManager.flush();</b>
+<b class="nc">&nbsp;            log.info(&quot;Marked {} participants as offline due to inactivity&quot;, staleParticipants.size());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

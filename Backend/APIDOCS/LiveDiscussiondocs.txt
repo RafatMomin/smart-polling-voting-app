@@ -1,0 +1,636 @@
+Live Discussion REST API Reference
+===================================
+
+Summary
+-------
+The Live Discussion REST API allows users to create, manage, and participate in real-time discussions.
+Discussions can be poll-specific (one-to-many: one poll, many participants) or general discussions
+(many-to-many: multiple topics, multiple participants). Users connect via WebSocket for real-time
+messaging and use REST API for discussion management.
+
+Features
+- Create poll-specific discussions (tied to a poll ID)
+- Create general discussions (independent of polls)
+- Join and leave discussions
+- View discussion history and participants
+- Real-time messaging via WebSocket
+- Direct messages within discussions
+- Discussion moderation (close/delete)
+- Automatic cleanup of inactive discussions
+
+Base Path: /discussions
+
+----------------------------------------------------
+1. Create Poll Discussion
+POST /discussions/poll/{pollId}
+
+Path Parameters:
+- pollId (Long, required): The ID of the poll
+
+Headers:
+Authorization: {authToken}
+
+Request Body (JSON):
+{
+  "title": "Let's discuss Poll #25 results",
+  "description": "Open discussion about the campus food preferences poll. Share your thoughts on why certain options are winning!"
+}
+
+Response (JSON):
+{
+  "id": 1,
+  "title": "Let's discuss Poll #25 results",
+  "description": "Open discussion about the campus food preferences poll. Share your thoughts on why certain options are winning!",
+  "type": "POLL_DISCUSSION",
+  "pollId": 25,
+  "hostUser": {
+    "emailId": "user@example.com",
+    "name": "John Doe"
+  },
+  "createdAt": "2025-11-04T14:30:00",
+  "active": true,
+  "participantCount": 1,
+  "messageCount": 0,
+  "websocketEndpoint": "ws://localhost:8080/discussion/1"
+}
+
+Error Responses:
+{ "error": "Poll not found" }
+{ "error": "Invalid token" }
+{ "error": "Discussion already exists for this poll" }
+
+----------------------------------------------------
+2. Create General Discussion
+POST /discussions/general
+
+Headers:
+Authorization: {authToken}
+
+Request Body (JSON):
+{
+  "title": "Campus Events Planning",
+  "description": "Let's coordinate upcoming campus events for the spring semester. This is a space for student organizations to collaborate and share ideas for events, fundraisers, and community activities.",
+  "tags": ["events", "planning", "spring2026"]
+}
+
+Response (JSON):
+{
+  "id": 2,
+  "title": "Campus Events Planning",
+  "description": "Let's coordinate upcoming campus events for the spring semester. This is a space for student organizations to collaborate and share ideas for events, fundraisers, and community activities.",
+  "type": "GENERAL_DISCUSSION",
+  "pollId": null,
+  "hostUser": {
+    "emailId": "user@example.com",
+    "name": "John Doe"
+  },
+  "tags": ["events", "planning", "spring2026"],
+  "createdAt": "2025-11-04T14:30:00",
+  "active": true,
+  "participantCount": 1,
+  "messageCount": 0,
+  "websocketEndpoint": "ws://localhost:8080/discussion/2"
+}
+
+Error Responses:
+{ "error": "Invalid token" }
+{ "error": "Title is required" }
+
+----------------------------------------------------
+3. Get All Discussions
+GET /discussions
+
+Query Parameters (optional):
+- type (String): Filter by type (POLL_DISCUSSION, GENERAL_DISCUSSION)
+- active (Boolean): Filter by active status (true/false)
+- pollId (Long): Get discussion for specific poll
+- tags (String): Comma-separated tags for filtering
+
+Response (JSON):
+[
+  {
+    "id": 1,
+    "title": "Let's discuss Poll #25 results",
+    "type": "POLL_DISCUSSION",
+    "pollId": 25,
+    "hostUser": {
+      "emailId": "user@example.com",
+      "name": "John Doe"
+    },
+    "createdAt": "2025-11-04T14:30:00",
+    "active": true,
+    "participantCount": 5,
+    "messageCount": 47,
+    "lastActivity": "2025-11-04T15:45:00"
+  },
+  {
+    "id": 2,
+    "title": "Campus Events Planning",
+    "type": "GENERAL_DISCUSSION",
+    "pollId": null,
+    "tags": ["events", "planning", "spring2026"],
+    "hostUser": {
+      "emailId": "admin@example.com",
+      "name": "Jane Smith"
+    },
+    "createdAt": "2025-11-04T13:00:00",
+    "active": true,
+    "participantCount": 12,
+    "messageCount": 156,
+    "lastActivity": "2025-11-04T16:20:00"
+  }
+]
+
+Examples:
+GET /discussions?type=POLL_DISCUSSION
+GET /discussions?active=true
+GET /discussions?pollId=25
+GET /discussions?tags=events,planning
+
+----------------------------------------------------
+4. Get Discussion Details
+GET /discussions/{discussionId}
+
+Path Parameters:
+- discussionId (Long, required): The ID of the discussion
+
+Response (JSON):
+{
+  "id": 1,
+  "title": "Let's discuss Poll #25 results",
+  "description": "Open discussion about the campus food preferences poll. Share your thoughts on why certain options are winning!",
+  "type": "POLL_DISCUSSION",
+  "pollId": 25,
+  "poll": {
+    "id": 25,
+    "title": "What's your favorite campus food?",
+    "type": "MULTIPLE_CHOICE",
+    "active": true
+  },
+  "hostUser": {
+    "emailId": "user@example.com",
+    "name": "John Doe"
+  },
+  "participants": [
+    {
+      "emailId": "user@example.com",
+      "name": "John Doe",
+      "joinedAt": "2025-11-04T14:30:00",
+      "isHost": true
+    },
+    {
+      "emailId": "alice@example.com",
+      "name": "Alice Johnson",
+      "joinedAt": "2025-11-04T14:35:00",
+      "isHost": false
+    }
+  ],
+  "createdAt": "2025-11-04T14:30:00",
+  "active": true,
+  "participantCount": 2,
+  "messageCount": 15,
+  "lastActivity": "2025-11-04T15:45:00",
+  "websocketEndpoint": "ws://coms-3090-036.class.las.iastate.edu:8080/discussion/1"
+}
+
+Error Responses:
+{ "error": "Discussion not found" }
+
+----------------------------------------------------
+5. Join Discussion
+POST /discussions/{discussionId}/join
+
+Path Parameters:
+- discussionId (Long, required): The ID of the discussion
+
+Headers:
+Authorization: {authToken}
+
+Response (JSON):
+{
+  "message": "Successfully joined discussion",
+  "discussionId": 1,
+  "websocketEndpoint": "ws://coms-3090-036.class.las.iastate.edu:8080/discussion/1",
+  "participantCount": 6
+}
+
+Error Responses:
+{ "error": "Discussion not found" }
+{ "error": "Discussion is closed" }
+{ "error": "Invalid token" }
+{ "error": "Already joined this discussion" }
+
+----------------------------------------------------
+6. Leave Discussion
+POST /discussions/{discussionId}/leave
+
+Path Parameters:
+- discussionId (Long, required): The ID of the discussion
+
+Headers:
+Authorization: {authToken}
+
+Response (JSON):
+{
+  "message": "Successfully left discussion",
+  "discussionId": 1
+}
+
+Error Responses:
+{ "error": "Discussion not found" }
+{ "error": "Invalid token" }
+{ "error": "Not a participant in this discussion" }
+
+----------------------------------------------------
+7. Get Discussion Messages
+GET /discussions/{discussionId}/messages
+
+Path Parameters:
+- discussionId (Long, required): The ID of the discussion
+
+Headers:
+Authorization: {authToken}
+
+Query Parameters (optional):
+- limit (Integer): Number of messages to retrieve (default: 50, max: 200)
+- before (Long): Get messages before this message ID (for pagination)
+- after (Long): Get messages after this message ID
+
+Response (JSON):
+{
+  "discussionId": 1,
+  "messages": [
+    {
+      "id": 101,
+      "user": {
+        "emailId": "user@example.com",
+        "name": "John Doe"
+      },
+      "content": "I think the pizza option is winning because of the variety available",
+      "messageType": "BROADCAST",
+      "timestamp": "2025-11-04T14:35:00",
+      "edited": false
+    },
+    {
+      "id": 102,
+      "user": {
+        "emailId": "alice@example.com",
+        "name": "Alice Johnson"
+      },
+      "content": "Agreed! Plus the late-night availability is a big factor",
+      "messageType": "BROADCAST",
+      "timestamp": "2025-11-04T14:36:00",
+      "edited": false
+    },
+    {
+      "id": 103,
+      "user": {
+        "emailId": "bob@example.com",
+        "name": "Bob Smith"
+      },
+      "content": "Hey Alice, want to grab lunch later?",
+      "messageType": "DIRECT_MESSAGE",
+      "recipientEmail": "alice@example.com",
+      "timestamp": "2025-11-04T14:37:00",
+      "edited": false
+    }
+  ],
+  "hasMore": true,
+  "nextCursor": 95
+}
+
+Error Responses:
+{ "error": "Discussion not found" }
+{ "error": "Invalid token" }
+{ "error": "Not a participant in this discussion" }
+
+----------------------------------------------------
+8. Get Discussion Participants
+GET /discussions/{discussionId}/participants
+
+Path Parameters:
+- discussionId (Long, required): The ID of the discussion
+
+Response (JSON):
+{
+  "discussionId": 1,
+  "participantCount": 5,
+  "participants": [
+    {
+      "emailId": "user@example.com",
+      "name": "John Doe",
+      "joinedAt": "2025-11-04T14:30:00",
+      "isHost": true,
+      "isOnline": true,
+      "lastSeen": "2025-11-04T16:20:00"
+    },
+    {
+      "emailId": "alice@example.com",
+      "name": "Alice Johnson",
+      "joinedAt": "2025-11-04T14:35:00",
+      "isHost": false,
+      "isOnline": true,
+      "lastSeen": "2025-11-04T16:19:00"
+    },
+    {
+      "emailId": "bob@example.com",
+      "name": "Bob Smith",
+      "joinedAt": "2025-11-04T14:40:00",
+      "isHost": false,
+      "isOnline": false,
+      "lastSeen": "2025-11-04T15:30:00"
+    }
+  ]
+}
+
+Error Responses:
+{ "error": "Discussion not found" }
+
+----------------------------------------------------
+9. Close Discussion
+PUT /discussions/{discussionId}/close
+
+Path Parameters:
+- discussionId (Long, required): The ID of the discussion
+
+Headers:
+Authorization: {authToken}
+
+Response (JSON):
+{
+  "message": "Discussion closed successfully",
+  "discussionId": 1,
+  "closedAt": "2025-11-04T16:30:00"
+}
+
+Error Responses:
+{ "error": "Discussion not found" }
+{ "error": "Invalid token" }
+{ "error": "Only the host can close this discussion" }
+{ "error": "Discussion already closed" }
+
+----------------------------------------------------
+10. Delete Discussion
+DELETE /discussions/{discussionId}
+
+Path Parameters:
+- discussionId (Long, required): The ID of the discussion
+
+Headers:
+Authorization: {authToken}
+
+Response (JSON):
+{
+  "message": "Discussion deleted successfully",
+  "discussionId": 1
+}
+
+Error Responses:
+{ "error": "Discussion not found" }
+{ "error": "Invalid token" }
+{ "error": "Only the host can delete this discussion" }
+
+Note: Deleting a discussion removes all messages and participant records.
+
+----------------------------------------------------
+11. Get User's Discussions
+GET /discussions/my
+
+Headers:
+Authorization: {authToken}
+
+Query Parameters (optional):
+- role (String): Filter by role (HOST, PARTICIPANT, ALL) - default: ALL
+- active (Boolean): Filter by active status
+
+Response (JSON):
+{
+  "hosted": [
+    {
+      "id": 1,
+      "title": "Let's discuss Poll #25 results",
+      "type": "POLL_DISCUSSION",
+      "createdAt": "2025-11-04T14:30:00",
+      "active": true,
+      "participantCount": 5,
+      "messageCount": 47
+    }
+  ],
+  "participating": [
+    {
+      "id": 2,
+      "title": "Campus Events Planning",
+      "type": "GENERAL_DISCUSSION",
+      "joinedAt": "2025-11-04T15:00:00",
+      "active": true,
+      "participantCount": 12,
+      "messageCount": 156
+    }
+  ]
+}
+
+Error Responses:
+{ "error": "Invalid token" }
+
+----------------------------------------------------
+12. Search Discussions
+GET /discussions/search
+
+Query Parameters:
+- q (String, required): Search query
+- type (String, optional): Filter by type
+- tags (String, optional): Comma-separated tags
+
+Response (JSON):
+[
+  {
+    "id": 1,
+    "title": "Let's discuss Poll #25 results",
+    "description": "Open discussion about the campus food preferences poll...",
+    "type": "POLL_DISCUSSION",
+    "pollId": 25,
+    "relevanceScore": 0.95,
+    "participantCount": 5,
+    "messageCount": 47,
+    "active": true
+  }
+]
+
+Example:
+GET /discussions/search?q=food&type=POLL_DISCUSSION
+
+----------------------------------------------------
+WEBSOCKET ENDPOINTS
+----------------------------------------------------
+
+13. Connect to Discussion WebSocket
+ws://coms-3090-036.class.las.iastate.edu:8080/discussion/{discussionId}?token={authToken}
+
+Path Parameters:
+- discussionId (Long, required): The ID of the discussion
+
+Query Parameters:
+- token (String, required): User's authentication token
+
+Description:
+Establishes a WebSocket connection for real-time messaging in a discussion.
+User must have joined the discussion via REST API before connecting.
+
+On Connect:
+{
+  "type": "WELCOME",
+  "message": "Connected to discussion: Let's discuss Poll #25 results",
+  "discussionId": 1,
+  "participantCount": 5,
+  "onlineCount": 3
+}
+
+Broadcast to Others:
+{
+  "type": "USER_JOINED",
+  "user": {
+    "emailId": "alice@example.com",
+    "name": "Alice Johnson"
+  },
+  "timestamp": "2025-11-04T14:35:00",
+  "participantCount": 6
+}
+
+----------------------------------------------------
+14. Send Broadcast Message
+Message Format (JSON):
+{
+  "type": "BROADCAST",
+  "content": "I think the pizza option is winning because of the variety available"
+}
+
+Broadcast to All:
+{
+  "type": "MESSAGE",
+  "messageId": 101,
+  "user": {
+    "emailId": "user@example.com",
+    "name": "John Doe"
+  },
+  "content": "I think the pizza option is winning because of the variety available",
+  "timestamp": "2025-11-04T14:35:00"
+}
+
+----------------------------------------------------
+15. Send Direct Message
+Message Format (JSON):
+{
+  "type": "DIRECT_MESSAGE",
+  "recipientEmail": "alice@example.com",
+  "content": "Hey, want to grab lunch later?"
+}
+
+Response to Sender and Recipient:
+{
+  "type": "DIRECT_MESSAGE",
+  "messageId": 103,
+  "sender": {
+    "emailId": "bob@example.com",
+    "name": "Bob Smith"
+  },
+  "recipient": {
+    "emailId": "alice@example.com",
+    "name": "Alice Johnson"
+  },
+  "content": "Hey, want to grab lunch later?",
+  "timestamp": "2025-11-04T14:37:00"
+}
+
+Error Response:
+{
+  "type": "ERROR",
+  "message": "Recipient not found in this discussion"
+}
+
+----------------------------------------------------
+16. Disconnect from Discussion
+Event: On WebSocket Close
+
+Broadcast to Others:
+{
+  "type": "USER_LEFT",
+  "user": {
+    "emailId": "alice@example.com",
+    "name": "Alice Johnson"
+  },
+  "timestamp": "2025-11-04T16:30:00",
+  "participantCount": 5
+}
+
+----------------------------------------------------
+DATABASE SCHEMA
+----------------------------------------------------
+
+Discussion Entity:
+- id (Long, Primary Key)
+- title (String, NOT NULL)
+- description (TEXT)
+- type (Enum: POLL_DISCUSSION, GENERAL_DISCUSSION)
+- pollId (Long, Foreign Key to Poll, nullable)
+- hostUserId (String, Foreign Key to Users)
+- createdAt (LocalDateTime)
+- closedAt (LocalDateTime, nullable)
+- active (Boolean, default true)
+- tags (List<String>, for general discussions)
+
+DiscussionParticipant Entity (Join Table):
+- id (Long, Primary Key)
+- discussionId (Long, Foreign Key)
+- userEmail (String, Foreign Key)
+- joinedAt (LocalDateTime)
+- leftAt (LocalDateTime, nullable)
+- isHost (Boolean)
+- lastSeen (LocalDateTime)
+
+DiscussionMessage Entity:
+- id (Long, Primary Key)
+- discussionId (Long, Foreign Key)
+- senderEmail (String, Foreign Key)
+- content (TEXT)
+- messageType (Enum: BROADCAST, DIRECT_MESSAGE, SYSTEM)
+- recipientEmail (String, nullable, for DMs)
+- timestamp (LocalDateTime)
+- edited (Boolean, default false)
+- editedAt (LocalDateTime, nullable)
+
+Relationships:
+- Discussion → Poll (Many-to-One, optional)
+- Discussion → User (Many-to-One, host)
+- Discussion ↔ User (Many-to-Many via DiscussionParticipant)
+- DiscussionMessage → Discussion (Many-to-One)
+- DiscussionMessage → User (Many-to-One, sender)
+
+----------------------------------------------------
+TECHNICAL NOTES
+----------------------------------------------------
+
+Authentication:
+- All REST endpoints (except GET all discussions) require authentication
+- WebSocket connections require token in query parameter
+- Token validated on connection and stored for message attribution
+
+Message Persistence:
+- All messages stored in database for history retrieval
+- WebSocket provides real-time delivery
+- REST API provides historical message access
+
+Auto-cleanup:
+- Discussions inactive for 30 days automatically closed
+- Participants marked offline after 5 minutes of inactivity
+- System messages generated for joins/leaves
+
+Performance:
+- Message pagination with cursor-based approach
+- Participant list cached in memory for active discussions
+- WebSocket broadcast uses efficient session management
+
+Limitations:
+- Maximum 100 participants per discussion (configurable)
+- Message content limited to 2000 characters
+- DMs only within discussion context (not global)
+- Discussion titles limited to 200 characters

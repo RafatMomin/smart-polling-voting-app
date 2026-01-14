@@ -1,0 +1,187 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > MailingService</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.Users.service</a>
+</div>
+
+<h1>Coverage Summary for Class: MailingService (onetoone.Users.service)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">MailingService</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    25%
+  </span>
+  <span class="absValue">
+    (1/4)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    10%
+  </span>
+  <span class="absValue">
+    (2/20)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.Users.service;
+&nbsp;
+&nbsp;import org.springframework.mail.SimpleMailMessage;
+&nbsp;import org.springframework.mail.javamail.JavaMailSender;
+&nbsp;import org.springframework.stereotype.Service;
+&nbsp;
+&nbsp;@Service
+&nbsp;public class MailingService {
+&nbsp;
+&nbsp;    private final JavaMailSender mailSender;
+<b class="fc">&nbsp;    public MailingService(JavaMailSender mailSender) {</b>
+<b class="fc">&nbsp;        this.mailSender = mailSender;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // email for verifying account when a user signs up
+&nbsp;    public void sendVerificationEmail(String to, String verificationLink)
+&nbsp;    {
+<b class="nc">&nbsp;        SimpleMailMessage message = new SimpleMailMessage();</b>
+<b class="nc">&nbsp;        message.setTo(to);</b>
+&nbsp;
+<b class="nc">&nbsp;        message.setSubject(&quot;Welcome to Voting and Polling App - Verify Your Email&quot;);</b>
+<b class="nc">&nbsp;        String emailBody = String.format(</b>
+&nbsp;            &quot;Welcome to Voting and Polling App! \n\n&quot; +
+&nbsp;            &quot;Thank you for creating an account with us. To complete your &quot; +
+&nbsp;            &quot;registration and start using our platform, please verify your email address. \n\n&quot; +
+&nbsp;            &quot;Your verification token is: \n&quot; + verificationLink + &quot;\n\n&quot; +
+&nbsp;            &quot;Please use this token to verify your account through our application.\n\n&quot; +
+&nbsp;            &quot;Best regards, \n&quot; +
+&nbsp;            &quot;The Polling and Voting Team\n\n&quot; +
+&nbsp;            &quot;----------------------------------------------------------\n&quot; +
+&nbsp;            &quot;Need help? Contact us at votingandpolling@gmail.com&quot;
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        message.setText(emailBody);</b>
+<b class="nc">&nbsp;        mailSender.send(message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // email for verifying an account when a user wants to reset their password
+&nbsp;    public void sendPasswordResetEmail(String to, String resetToken)
+&nbsp;    {
+<b class="nc">&nbsp;        SimpleMailMessage message = new SimpleMailMessage();</b>
+<b class="nc">&nbsp;        message.setTo(to);</b>
+&nbsp;
+<b class="nc">&nbsp;        message.setSubject(&quot;Voting and Polling App - Password Reset Request&quot;);</b>
+<b class="nc">&nbsp;        String emailBody = String.format(</b>
+&nbsp;            &quot;Hello,\n\n&quot; +
+&nbsp;            &quot;We received a request to reset your password for your Voting and Polling App account.\n\n&quot; +
+&nbsp;            &quot;Your password reset token is: \n&quot; + resetToken + &quot;\n\n&quot; +
+&nbsp;            &quot;Please use this token to reset your password through our application.\n\n&quot; +
+&nbsp;            &quot;Best regards,\n&quot; +
+&nbsp;            &quot;The Voting and Polling Team\n\n&quot; +
+&nbsp;            &quot;-----------------------------------------------------------\n&quot; +
+&nbsp;            &quot;Need help? Contact us at votingandpolling@gmail.com&quot;
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        message.setText(emailBody);</b>
+<b class="nc">&nbsp;        mailSender.send(message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // email to admin with access code
+&nbsp;    public void sendPollAccessCodeEmail(String to, String pollTitle, String accessCode)
+&nbsp;    {
+<b class="nc">&nbsp;        SimpleMailMessage message = new SimpleMailMessage();</b>
+<b class="nc">&nbsp;        message.setTo(to);</b>
+&nbsp;
+<b class="nc">&nbsp;        message.setSubject(&quot;Your Private Poll Access Code - &quot; + pollTitle);</b>
+<b class="nc">&nbsp;        String emailBody = String.format(</b>
+&nbsp;                &quot;Hello,\n\n&quot; +
+&nbsp;                        &quot;You have successfully created a private poll: \&quot;&quot; + pollTitle + &quot;\&quot;\n\n&quot; +
+&nbsp;                        &quot;Your access code is: &quot; + accessCode + &quot;\n\n&quot; +
+&nbsp;                        &quot;Share this code with users who you want to join your poll. &quot; +
+&nbsp;                        &quot;They can use this code to join and participate in your poll.\n\n&quot; +
+&nbsp;                        &quot;Important: Keep this code secure. Only share it with users you want to grant access to.\n\n&quot; +
+&nbsp;                        &quot;Best regards,\n&quot; +
+&nbsp;                        &quot;The Voting and Polling Team\n\n&quot; +
+&nbsp;                        &quot;-----------------------------------------------------------\n&quot; +
+&nbsp;                        &quot;Need help? Contact us at votingandpolling@gmail.com&quot;
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        message.setText(emailBody);</b>
+<b class="nc">&nbsp;        mailSender.send(message);</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

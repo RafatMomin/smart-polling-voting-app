@@ -1,0 +1,444 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > ChatService</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.AI.Service</a>
+</div>
+
+<h1>Coverage Summary for Class: ChatService (onetoone.AI.Service)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ChatService</td>
+<td class="coverageStat">
+  <span class="percent">
+    18.2%
+  </span>
+  <span class="absValue">
+    (2/11)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/76)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    2.7%
+  </span>
+  <span class="absValue">
+    (4/147)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">ChatService$$SpringCGLIB$$0</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    18.2%
+  </span>
+  <span class="absValue">
+    (2/11)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/76)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    2.7%
+  </span>
+  <span class="absValue">
+    (4/147)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.AI.Service;
+&nbsp;
+&nbsp;import onetoone.AI.model.ChatMessage;
+&nbsp;import onetoone.AI.model.SentenceTransformerEmbeddingModel;
+&nbsp;import onetoone.AI.repository.ChatMessageRepository;
+&nbsp;import onetoone.Users.model.Users;
+&nbsp;import onetoone.Users.repository.UserRepository;
+&nbsp;import onetoone.Polling.model.*;
+&nbsp;import onetoone.Polling.service.PollService;
+&nbsp;import org.slf4j.Logger;
+&nbsp;import org.slf4j.LoggerFactory;
+&nbsp;import org.springframework.ai.openai.OpenAiChatModel;
+&nbsp;import org.springframework.beans.factory.annotation.Autowired;
+&nbsp;import org.springframework.stereotype.Service;
+&nbsp;import org.springframework.transaction.annotation.Transactional;
+&nbsp;
+&nbsp;import java.util.*;
+&nbsp;import java.util.regex.Matcher;
+&nbsp;import java.util.regex.Pattern;
+&nbsp;import java.util.stream.Collectors;
+&nbsp;
+&nbsp;@Service
+&nbsp;public class ChatService {
+&nbsp;
+<b class="fc">&nbsp;    private static final Logger log = LoggerFactory.getLogger(ChatService.class);</b>
+&nbsp;    private final OpenAiChatModel chatModel;
+&nbsp;
+&nbsp;    @Autowired private SentenceTransformerEmbeddingModel embeddingModel;
+&nbsp;    @Autowired private PollService pollService;
+&nbsp;    @Autowired private ChatMessageRepository chatMessageRepository;
+&nbsp;    @Autowired private UserRepository userRepository;
+&nbsp;
+&nbsp;    // Regex patterns for poll ID detection
+<b class="fc">&nbsp;    private static final Pattern POLL_ID_PATTERN = Pattern.compile(</b>
+&nbsp;            &quot;\\bpoll\\s*#?(\\d+)\\b|\\bpoll\\s+id\\s*:?\\s*(\\d+)\\b|#(\\d+)&quot;,
+&nbsp;            Pattern.CASE_INSENSITIVE
+&nbsp;    );
+&nbsp;
+&nbsp;    @Autowired
+<b class="fc">&nbsp;    public ChatService(OpenAiChatModel chatModel) {</b>
+<b class="fc">&nbsp;        this.chatModel = chatModel;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getChatResponse(String userInput) {
+<b class="nc">&nbsp;        return getChatResponseWithAuth(userInput, null);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Transactional
+&nbsp;    public String getChatResponseWithAuth(String userInput, String authToken) {
+<b class="nc">&nbsp;        long startTime = System.currentTimeMillis();</b>
+&nbsp;
+&nbsp;        // Find user by auth token (if provided)
+<b class="nc">&nbsp;        Users user = null;</b>
+<b class="nc">&nbsp;        if (authToken != null &amp;&amp; !authToken.isEmpty()) {</b>
+<b class="nc">&nbsp;            String token = authToken.startsWith(&quot;Bearer &quot;)</b>
+<b class="nc">&nbsp;                    ? authToken.substring(7)</b>
+<b class="nc">&nbsp;                    : authToken;</b>
+<b class="nc">&nbsp;            log.info(&quot;Token: {}&quot;, token);</b>
+&nbsp;
+<b class="nc">&nbsp;            user = userRepository.findByauthtoken(token);</b>
+<b class="nc">&nbsp;            if (user == null) {</b>
+<b class="nc">&nbsp;                log.warn(&quot;Invalid token attempt: {}&quot;, token);</b>
+<b class="nc">&nbsp;                return &quot;{\&quot;error\&quot;:\&quot;Invalid or expired authentication token\&quot;}&quot;;</b>
+&nbsp;            }
+<b class="nc">&nbsp;            if (!user.isVerified()) {</b>
+<b class="nc">&nbsp;                return &quot;{\&quot;error\&quot;:\&quot;Please verify your email before using chat\&quot;}&quot;;</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        ChatMessage chatMessage = user != null ?</b>
+<b class="nc">&nbsp;                new ChatMessage(user, userInput) :</b>
+<b class="nc">&nbsp;                null;</b>
+&nbsp;
+&nbsp;        try {
+<b class="nc">&nbsp;            log.info(&quot;Processing chat query{}: {}&quot;,</b>
+<b class="nc">&nbsp;                    user != null ? &quot; from &quot; + user.getEmailId() : &quot;&quot;,</b>
+&nbsp;                    userInput);
+&nbsp;
+&nbsp;            // 🎯 HYBRID SEARCH: Combine exact ID matching + semantic search
+<b class="nc">&nbsp;            List&lt;Poll&gt; relevant = performHybridSearch(userInput);</b>
+&nbsp;
+<b class="nc">&nbsp;            log.info(&quot;📊 Total polls retrieved: {} (hybrid search result)&quot;, relevant.size());</b>
+&nbsp;
+<b class="nc">&nbsp;            if (chatMessage != null) {</b>
+<b class="nc">&nbsp;                chatMessage.setReferencedPolls(relevant);</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            StringBuilder ctx = buildContext(relevant);</b>
+<b class="nc">&nbsp;            String prompt = buildPrompt(ctx.toString(), userInput);</b>
+<b class="nc">&nbsp;            String response = chatModel.call(prompt);</b>
+&nbsp;
+<b class="nc">&nbsp;            if (chatMessage != null) {</b>
+<b class="nc">&nbsp;                chatMessage.setBotResponse(response);</b>
+<b class="nc">&nbsp;                long elapsed = System.currentTimeMillis() - startTime;</b>
+<b class="nc">&nbsp;                chatMessage.setResponseTimeMs(elapsed);</b>
+<b class="nc">&nbsp;                chatMessageRepository.save(chatMessage);</b>
+<b class="nc">&nbsp;                log.info(&quot;Chat saved for user {} in {}ms&quot;, user.getEmailId(), elapsed);</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            return response;</b>
+&nbsp;
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            log.error(&quot;Error processing chat: {}&quot;, e.getMessage(), e);</b>
+<b class="nc">&nbsp;            String errorMsg = &quot;Sorry, error: &quot; + e.getMessage();</b>
+&nbsp;
+<b class="nc">&nbsp;            if (chatMessage != null) {</b>
+<b class="nc">&nbsp;                chatMessage.setBotResponse(errorMsg);</b>
+<b class="nc">&nbsp;                chatMessage.setResponseTimeMs(System.currentTimeMillis() - startTime);</b>
+<b class="nc">&nbsp;                chatMessageRepository.save(chatMessage);</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            return errorMsg;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Hybrid search: Combines exact ID matching with semantic search
+&nbsp;     * Priority: Mentioned polls first, then fill with semantic matches
+&nbsp;     */
+&nbsp;    private List&lt;Poll&gt; performHybridSearch(String userInput) throws Exception {
+<b class="nc">&nbsp;        Set&lt;Poll&gt; results = new LinkedHashSet&lt;&gt;(); // Use LinkedHashSet to maintain order and avoid duplicates</b>
+&nbsp;
+&nbsp;        // Step 1: Extract and fetch polls mentioned by ID
+<b class="nc">&nbsp;        List&lt;Long&gt; mentionedIds = extractPollIds(userInput);</b>
+&nbsp;
+<b class="nc">&nbsp;        if (!mentionedIds.isEmpty()) {</b>
+<b class="nc">&nbsp;            log.info(&quot;🎯 User mentioned poll IDs: {}&quot;, mentionedIds);</b>
+&nbsp;
+<b class="nc">&nbsp;            for (Long pollId : mentionedIds) {</b>
+<b class="nc">&nbsp;                Optional&lt;Poll&gt; poll = pollService.findPoll(pollId);</b>
+<b class="nc">&nbsp;                if (poll.isPresent()) {</b>
+<b class="nc">&nbsp;                    results.add(poll.get());</b>
+<b class="nc">&nbsp;                    log.info(&quot;  ✅ Added poll #{}: &#39;{}&#39;&quot;, pollId, poll.get().getTitle());</b>
+&nbsp;                } else {
+<b class="nc">&nbsp;                    log.warn(&quot;  ❌ Poll #{} not found&quot;, pollId);</b>
+&nbsp;                }
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+&nbsp;        // Step 2: Perform semantic search to fill remaining slots
+<b class="nc">&nbsp;        int neededPolls = 5 - results.size();</b>
+&nbsp;
+<b class="nc">&nbsp;        if (neededPolls &gt; 0) {</b>
+<b class="nc">&nbsp;            log.info(&quot;🔍 Performing semantic search for {} more polls...&quot;, neededPolls);</b>
+&nbsp;
+<b class="nc">&nbsp;            float[] qVec = embeddingModel.embed(userInput);</b>
+<b class="nc">&nbsp;            log.info(&quot;Generated query embedding of length: {}&quot;, qVec.length);</b>
+&nbsp;
+&nbsp;            // Get more candidates than needed to account for duplicates
+<b class="nc">&nbsp;            List&lt;Poll&gt; semanticMatches = pollService.findSimilarPolls(qVec, neededPolls + mentionedIds.size());</b>
+&nbsp;
+&nbsp;            // Add semantic matches, skipping duplicates
+<b class="nc">&nbsp;            int added = 0;</b>
+<b class="nc">&nbsp;            for (Poll p : semanticMatches) {</b>
+<b class="nc">&nbsp;                if (results.stream().noneMatch(existing -&gt; existing.getId().equals(p.getId()))) {</b>
+<b class="nc">&nbsp;                    results.add(p);</b>
+<b class="nc">&nbsp;                    added++;</b>
+<b class="nc">&nbsp;                    log.info(&quot;  ✅ Added semantic match poll #{}: &#39;{}&#39; (rank: #{})&quot;,</b>
+<b class="nc">&nbsp;                            p.getId(), p.getTitle(), results.size());</b>
+&nbsp;
+<b class="nc">&nbsp;                    if (results.size() &gt;= 5) break; // Stop when we have 5 total</b>
+&nbsp;                }
+&nbsp;            }
+<b class="nc">&nbsp;            log.info(&quot;  📈 Added {} polls from semantic search&quot;, added);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return new ArrayList&lt;&gt;(results);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Extract poll IDs from user query
+&nbsp;     * Matches: &quot;poll 50&quot;, &quot;poll #50&quot;, &quot;poll ID: 50&quot;, &quot;#50&quot;
+&nbsp;     */
+&nbsp;    private List&lt;Long&gt; extractPollIds(String userInput) {
+<b class="nc">&nbsp;        List&lt;Long&gt; pollIds = new ArrayList&lt;&gt;();</b>
+<b class="nc">&nbsp;        Matcher matcher = POLL_ID_PATTERN.matcher(userInput);</b>
+&nbsp;
+<b class="nc">&nbsp;        while (matcher.find()) {</b>
+&nbsp;            try {
+&nbsp;                // Check which group matched and extract the ID
+<b class="nc">&nbsp;                String idStr = null;</b>
+<b class="nc">&nbsp;                if (matcher.group(1) != null) {</b>
+<b class="nc">&nbsp;                    idStr = matcher.group(1);</b>
+<b class="nc">&nbsp;                } else if (matcher.group(2) != null) {</b>
+<b class="nc">&nbsp;                    idStr = matcher.group(2);</b>
+<b class="nc">&nbsp;                } else if (matcher.group(3) != null) {</b>
+<b class="nc">&nbsp;                    idStr = matcher.group(3);</b>
+&nbsp;                }
+&nbsp;
+<b class="nc">&nbsp;                if (idStr != null) {</b>
+<b class="nc">&nbsp;                    Long pollId = Long.parseLong(idStr);</b>
+<b class="nc">&nbsp;                    if (!pollIds.contains(pollId)) {</b>
+<b class="nc">&nbsp;                        pollIds.add(pollId);</b>
+&nbsp;                    }
+&nbsp;                }
+&nbsp;            } catch (NumberFormatException e) {
+<b class="nc">&nbsp;                log.warn(&quot;Failed to parse poll ID from matcher groups&quot;);</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return pollIds;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public List&lt;ChatMessage&gt; getUserChatHistory(String email) {
+<b class="nc">&nbsp;        return chatMessageRepository.findByUserEmailOrderByTimestampDesc(email);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public long getUserMessageCount(String email) {
+<b class="nc">&nbsp;        return chatMessageRepository.countByUserEmail(email);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private StringBuilder buildContext(List&lt;Poll&gt; relevant) {
+<b class="nc">&nbsp;        StringBuilder ctx = new StringBuilder();</b>
+<b class="nc">&nbsp;        if (relevant.isEmpty()) {</b>
+<b class="nc">&nbsp;            ctx.append(&quot;No polls found.\n&quot;);</b>
+&nbsp;        } else {
+<b class="nc">&nbsp;            ctx.append(&quot;Available polls:\n\n&quot;);</b>
+<b class="nc">&nbsp;            for (int i = 0; i &lt; relevant.size(); i++) {</b>
+<b class="nc">&nbsp;                Poll p = relevant.get(i);</b>
+<b class="nc">&nbsp;                ctx.append(String.format(&quot;%d. Poll #%d: \&quot;%s\&quot;\n&quot;,</b>
+<b class="nc">&nbsp;                        i + 1, p.getId(), p.getTitle()));</b>
+<b class="nc">&nbsp;                ctx.append(String.format(&quot;   Type: %s, Status: %s\n&quot;,</b>
+<b class="nc">&nbsp;                        p.getType(), p.isActive() ? &quot;Active&quot; : &quot;Closed&quot;));</b>
+&nbsp;
+<b class="nc">&nbsp;                if (p.getContext() != null &amp;&amp; !p.getContext().trim().isEmpty()) {</b>
+<b class="nc">&nbsp;                    ctx.append(String.format(&quot;   Context: %s\n&quot;, p.getContext()));</b>
+&nbsp;                }
+&nbsp;
+<b class="nc">&nbsp;                if (p instanceof MultipleChoicePoll) {</b>
+<b class="nc">&nbsp;                    MultipleChoicePoll mcp = (MultipleChoicePoll) p;</b>
+<b class="nc">&nbsp;                    ctx.append(String.format(&quot;   Options: %s\n&quot;,</b>
+<b class="nc">&nbsp;                            String.join(&quot;, &quot;, mcp.getOptions())));</b>
+<b class="nc">&nbsp;                } else if (p instanceof RankingPoll) {</b>
+<b class="nc">&nbsp;                    RankingPoll rp = (RankingPoll) p;</b>
+<b class="nc">&nbsp;                    ctx.append(String.format(&quot;   Options to rank: %s\n&quot;,</b>
+<b class="nc">&nbsp;                            String.join(&quot;, &quot;, rp.getOptions())));</b>
+<b class="nc">&nbsp;                } else if (p instanceof RatingPoll) {</b>
+<b class="nc">&nbsp;                    ctx.append(&quot;   Rating scale: 1-5\n&quot;);</b>
+<b class="nc">&nbsp;                } else if (p instanceof YesNoPoll) {</b>
+<b class="nc">&nbsp;                    ctx.append(&quot;   Response options: Yes/No\n&quot;);</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                try {
+<b class="nc">&nbsp;                    String results = fetchLiveResults(p);</b>
+<b class="nc">&nbsp;                    ctx.append(String.format(&quot;   Results: %s\n&quot;, results));</b>
+&nbsp;                } catch (Exception e) {
+<b class="nc">&nbsp;                    ctx.append(&quot;   Results: unavailable\n&quot;);</b>
+&nbsp;                }
+<b class="nc">&nbsp;                ctx.append(&quot;\n&quot;);</b>
+&nbsp;            }
+&nbsp;        }
+<b class="nc">&nbsp;        return ctx;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private String buildPrompt(String context, String userInput) {
+<b class="nc">&nbsp;        return String.format(&quot;&quot;&quot;</b>
+&nbsp;            You are a helpful poll assistant. Answer using the poll data below.
+&nbsp;            Be specific with poll IDs, titles, and exact numbers.
+&nbsp;            
+&nbsp;            POLL DATA:
+&nbsp;            %s
+&nbsp;            
+&nbsp;            USER QUESTION: %s
+&nbsp;            
+&nbsp;            YOUR ANSWER:
+&nbsp;            &quot;&quot;&quot;, context, userInput);
+&nbsp;    }
+&nbsp;
+&nbsp;    private String fetchLiveResults(Poll p) {
+&nbsp;        try {
+<b class="nc">&nbsp;            if (p instanceof YesNoPoll) {</b>
+<b class="nc">&nbsp;                var stats = pollService.getYesNoStats(p.getId());</b>
+<b class="nc">&nbsp;                return String.format(&quot;Yes: %s (%.1f%%), No: %s&quot;,</b>
+<b class="nc">&nbsp;                        stats.get(&quot;yes&quot;), stats.get(&quot;yesPercent&quot;), stats.get(&quot;no&quot;));</b>
+<b class="nc">&nbsp;            } else if (p instanceof RatingPoll) {</b>
+<b class="nc">&nbsp;                var stats = pollService.getRatingStats(p.getId());</b>
+<b class="nc">&nbsp;                return String.format(&quot;Avg: %.2f/5, Total: %s votes&quot;,</b>
+<b class="nc">&nbsp;                        stats.get(&quot;average&quot;), stats.get(&quot;totalVotes&quot;));</b>
+<b class="nc">&nbsp;            } else if (p instanceof MultipleChoicePoll mcp) {</b>
+<b class="nc">&nbsp;                var stats = pollService.getMultipleChoiceStats(p.getId(), mcp.getOptions());</b>
+&nbsp;                @SuppressWarnings(&quot;unchecked&quot;)
+<b class="nc">&nbsp;                List&lt;java.util.Map&lt;String,Object&gt;&gt; breakdown =</b>
+<b class="nc">&nbsp;                        (List&lt;java.util.Map&lt;String,Object&gt;&gt;) stats.get(&quot;breakdown&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;                StringBuilder sb = new StringBuilder();</b>
+<b class="nc">&nbsp;                for (var item : breakdown) {</b>
+<b class="nc">&nbsp;                    sb.append(String.format(&quot;%s: %s (%.1f%%), &quot;,</b>
+<b class="nc">&nbsp;                            item.get(&quot;option&quot;), item.get(&quot;count&quot;), item.get(&quot;percent&quot;)));</b>
+&nbsp;                }
+<b class="nc">&nbsp;                return sb.toString() + &quot;Total: &quot; + stats.get(&quot;totalVotes&quot;);</b>
+<b class="nc">&nbsp;            } else if (p instanceof RankingPoll rp) {</b>
+<b class="nc">&nbsp;                var stats = pollService.getRankingStats(p.getId(), rp.getOptions().size());</b>
+&nbsp;                @SuppressWarnings(&quot;unchecked&quot;)
+<b class="nc">&nbsp;                List&lt;java.util.Map&lt;String,Object&gt;&gt; scores =</b>
+<b class="nc">&nbsp;                        (List&lt;java.util.Map&lt;String,Object&gt;&gt;) stats.get(&quot;scores&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;                StringBuilder sb = new StringBuilder();</b>
+<b class="nc">&nbsp;                for (int i = 0; i &lt; Math.min(3, scores.size()); i++) {</b>
+<b class="nc">&nbsp;                    var item = scores.get(i);</b>
+<b class="nc">&nbsp;                    sb.append(String.format(&quot;#%d: %s (score: %s), &quot;,</b>
+<b class="nc">&nbsp;                            i + 1, item.get(&quot;choice&quot;), item.get(&quot;score&quot;)));</b>
+&nbsp;                }
+<b class="nc">&nbsp;                return sb.toString() + &quot;Total: &quot; + stats.get(&quot;totalVotes&quot;);</b>
+&nbsp;            }
+<b class="nc">&nbsp;            return &quot;available&quot;;</b>
+&nbsp;        } catch (Exception ex) {
+<b class="nc">&nbsp;            return &quot;unavailable&quot;;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

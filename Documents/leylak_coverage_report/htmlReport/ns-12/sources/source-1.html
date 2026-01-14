@@ -1,0 +1,285 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > LiveResultsService</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.LiveResults.service</a>
+</div>
+
+<h1>Coverage Summary for Class: LiveResultsService (onetoone.LiveResults.service)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">LiveResultsService</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/8)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/26)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/60)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.LiveResults.service;
+&nbsp;
+&nbsp;import onetoone.LiveResults.dto.LiveResultsMessage;
+&nbsp;import onetoone.LiveResults.dto.LiveResultsMessage.OptionDistribution;
+&nbsp;import onetoone.Polling.model.*;
+&nbsp;
+&nbsp;import onetoone.Polling.repository.PollRepository;
+&nbsp;import onetoone.Polling.repository.VoteRepository;
+&nbsp;import org.springframework.beans.factory.annotation.Autowired;
+&nbsp;
+&nbsp;import org.springframework.messaging.simp.SimpMessagingTemplate;
+&nbsp;import org.springframework.stereotype.Service;
+&nbsp;
+&nbsp;import java.util.*;
+&nbsp;
+&nbsp;@Service
+<b class="nc">&nbsp;public class LiveResultsService {</b>
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private SimpMessagingTemplate messagingTemplate;
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private PollRepository pollRepository;
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private VoteRepository voteRepository;
+&nbsp;
+&nbsp;
+&nbsp;    // broadcast updated results to all subscribers, called after vote is cast or deleted
+&nbsp;    public void broadcastResults(Long pollId) {
+<b class="nc">&nbsp;        LiveResultsMessage message = calculatePollResults(pollId);</b>
+&nbsp;
+&nbsp;        // sends to WebSocket topic AKA all subscribers to this poll will get it
+<b class="nc">&nbsp;        messagingTemplate.convertAndSend(&quot;/topic/poll/&quot; + pollId, message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // calculates results for poll based on its poll type
+&nbsp;    private LiveResultsMessage calculatePollResults(Long pollId) {
+&nbsp;
+<b class="nc">&nbsp;        Poll poll = pollRepository.findById(pollId)</b>
+<b class="nc">&nbsp;                .orElseThrow(() -&gt; new NoSuchElementException(&quot;Poll not found&quot;));</b>
+&nbsp;
+<b class="nc">&nbsp;        String status = poll.isActive() ? &quot;active&quot; : &quot;closed&quot;;</b>
+<b class="nc">&nbsp;        String pollType = poll.getType();</b>
+&nbsp;
+&nbsp;        // based on poll type
+&nbsp;        List&lt;OptionDistribution&gt; distribution;
+&nbsp;        Integer totalVotes;
+&nbsp;
+<b class="nc">&nbsp;        switch (pollType) {</b>
+&nbsp;            case &quot;YES_NO&quot;:
+<b class="nc">&nbsp;                return buildYesNoResults(pollId, status);</b>
+&nbsp;
+&nbsp;            case &quot;RATING&quot;:
+<b class="nc">&nbsp;                return buildRatingResults(pollId, status);</b>
+&nbsp;
+&nbsp;            case &quot;MULTIPLE_CHOICE&quot;:
+<b class="nc">&nbsp;                MultipleChoicePoll mcp = (MultipleChoicePoll) poll;</b>
+<b class="nc">&nbsp;                return buildMultipleChoiceResults(pollId, status, mcp.getOptions());</b>
+&nbsp;
+&nbsp;            case &quot;RANKING&quot;:
+<b class="nc">&nbsp;                RankingPoll rp = (RankingPoll) poll;</b>
+<b class="nc">&nbsp;                return buildRankingResults(pollId, status, rp.getOptions().size());</b>
+&nbsp;
+&nbsp;            default:
+<b class="nc">&nbsp;                throw new IllegalStateException(&quot;Unknown poll type: &quot; + pollType);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    // builds results for Yes No polls (option 0 = No, option 1 = Yes)
+&nbsp;    private LiveResultsMessage buildYesNoResults(Long pollId, String status) {
+<b class="nc">&nbsp;        long yesCount = voteRepository.countYes(pollId);</b>
+<b class="nc">&nbsp;        long noCount = voteRepository.countNo(pollId);</b>
+<b class="nc">&nbsp;        long total = yesCount + noCount;</b>
+&nbsp;
+<b class="nc">&nbsp;        List&lt;OptionDistribution&gt; distribution = new ArrayList&lt;&gt;();</b>
+&nbsp;
+&nbsp;        // 0 = No
+<b class="nc">&nbsp;        double noPercent = total &gt; 0 ? (noCount * 100.0 / total) : 0.0;</b>
+<b class="nc">&nbsp;        distribution.add(new OptionDistribution(0L, (int) noCount, noPercent));</b>
+&nbsp;
+&nbsp;        // 1 = Yes
+<b class="nc">&nbsp;        double yesPercent = total &gt; 0 ? (yesCount * 100.0 / total) : 0.0;</b>
+<b class="nc">&nbsp;        distribution.add(new OptionDistribution(1L, (int) yesCount, yesPercent));</b>
+&nbsp;
+<b class="nc">&nbsp;        return new LiveResultsMessage(pollId, status, (int) total, distribution);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;
+&nbsp;    // builds results for Rating polls (options 1-5)
+&nbsp;    private LiveResultsMessage buildRatingResults(Long pollId, String status) {
+<b class="nc">&nbsp;        long total = voteRepository.countTotalByPoll(pollId);</b>
+<b class="nc">&nbsp;        List&lt;OptionDistribution&gt; distribution = new ArrayList&lt;&gt;();</b>
+&nbsp;
+&nbsp;        // counts votes for each rating 1-5
+<b class="nc">&nbsp;        for (int rating = 1; rating &lt;= 5; rating++) {</b>
+<b class="nc">&nbsp;            long count = voteRepository.countByNumericValue(pollId, rating);</b>
+<b class="nc">&nbsp;            double percent = total &gt; 0 ? (count * 100.0 / total) : 0.0;</b>
+<b class="nc">&nbsp;            distribution.add(new OptionDistribution((long) rating, (int) count, percent));</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return new LiveResultsMessage(pollId, status, (int) total, distribution);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // builds results for Multiple Choice polls
+&nbsp;    private LiveResultsMessage buildMultipleChoiceResults(Long pollId, String status, List&lt;String&gt; options) {
+<b class="nc">&nbsp;        long total = voteRepository.countTotalByPoll(pollId);</b>
+&nbsp;
+&nbsp;        // get vote counts
+<b class="nc">&nbsp;        List&lt;Object[]&gt; voteCounts = voteRepository.countChoices(pollId);</b>
+<b class="nc">&nbsp;        Map&lt;String, Long&gt; countsMap = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;        for (Object[] row : voteCounts) {</b>
+<b class="nc">&nbsp;            String choice = (String) row[0];</b>
+<b class="nc">&nbsp;            Long count = (Long) row[1];</b>
+<b class="nc">&nbsp;            countsMap.put(choice, count);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // calculate distribution for each option
+<b class="nc">&nbsp;        List&lt;OptionDistribution&gt; distribution = new ArrayList&lt;&gt;();</b>
+<b class="nc">&nbsp;        for (int i = 0; i &lt; options.size(); i++) {</b>
+<b class="nc">&nbsp;            String option = options.get(i);</b>
+<b class="nc">&nbsp;            long count = countsMap.getOrDefault(option, 0L);</b>
+<b class="nc">&nbsp;            double percent = total &gt; 0 ? (count * 100.0 / total) : 0.0;</b>
+&nbsp;
+&nbsp;            // use index as optionId for easier frontend identification
+<b class="nc">&nbsp;            distribution.add(new OptionDistribution((long) i, (int) count, percent));</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return new LiveResultsMessage(pollId, status, (int) total, distribution);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // builds results for Ranking polls, shows Borda count scores for every option
+&nbsp;    private LiveResultsMessage buildRankingResults(Long pollId, String status, int totalOptions) {
+&nbsp;        // count distnict users who voted since each user submits multiple votes technically
+<b class="nc">&nbsp;        long distinctVoters = voteRepository.countDistinctUsersByPoll(pollId);</b>
+&nbsp;
+&nbsp;        // get Borda scores
+<b class="nc">&nbsp;        List&lt;Object[]&gt; scores = voteRepository.rankingScores(pollId, totalOptions);</b>
+&nbsp;
+<b class="nc">&nbsp;        List&lt;OptionDistribution&gt; distribution = new ArrayList&lt;&gt;();</b>
+<b class="nc">&nbsp;        for (int i = 0; i &lt; scores.size(); i++) {</b>
+<b class="nc">&nbsp;            Object[] row = scores.get(i);</b>
+<b class="nc">&nbsp;            String choice = (String) row[0];</b>
+<b class="nc">&nbsp;            Number scoreNumber = (Number) row[1];</b>
+&nbsp;            int score;
+<b class="nc">&nbsp;            if (scoreNumber == null) {</b>
+<b class="nc">&nbsp;                score = 0;</b>
+&nbsp;            } else {
+<b class="nc">&nbsp;                score = scoreNumber.intValue();</b>
+&nbsp;            }
+&nbsp;
+&nbsp;
+&nbsp;            // ranking: shows the score as &quot;count&quot; and calculate a percentage based on max possible score
+&nbsp;            // the max possible score per voter = totalOptions points
+&nbsp;            // the max total score = distinctVoters * totalOptions
+<b class="nc">&nbsp;            long maxPossibleScore = distinctVoters * totalOptions;</b>
+<b class="nc">&nbsp;            double percent = maxPossibleScore &gt; 0 ? (score * 100.0 / maxPossibleScore) : 0.0;</b>
+&nbsp;
+<b class="nc">&nbsp;            distribution.add(new OptionDistribution((long) i, score, percent));</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return new LiveResultsMessage(pollId, status, (int) distinctVoters, distribution);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // gets results without broadcasting (for testing controller)
+&nbsp;    public LiveResultsMessage getResultsSnapshot(Long pollId) {
+<b class="nc">&nbsp;        return calculatePollResults(pollId);</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

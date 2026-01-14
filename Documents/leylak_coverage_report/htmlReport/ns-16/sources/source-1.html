@@ -1,0 +1,929 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > PollController</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.Polling.controller</a>
+</div>
+
+<h1>Coverage Summary for Class: PollController (onetoone.Polling.controller)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">PollController</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    11.1%
+  </span>
+  <span class="absValue">
+    (3/27)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    7.4%
+  </span>
+  <span class="absValue">
+    (11/148)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    7.7%
+  </span>
+  <span class="absValue">
+    (28/363)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.Polling.controller;
+&nbsp;
+&nbsp;import onetoone.LiveResults.controller.LiveResultsController;
+&nbsp;import onetoone.LiveResults.service.LiveResultsService;
+&nbsp;import onetoone.Location.dto.VoteRequest;
+&nbsp;import onetoone.Polling.model.*;
+&nbsp;import onetoone.Polling.repository.PollRepository;
+&nbsp;import onetoone.Location.service.LocationService;
+&nbsp;import onetoone.Polling.service.PollService;
+&nbsp;import onetoone.Users.repository.UserRepository;
+&nbsp;import onetoone.Polling.model.PollModerator;
+&nbsp;//import onetoone.Polling.util.ModeratorUtils;
+&nbsp;import onetoone.Polling.dto.ModeratorAssignmentDTO;
+&nbsp;import org.springframework.beans.factory.annotation.Autowired;
+&nbsp;import org.springframework.http.HttpStatus;
+&nbsp;import org.springframework.http.ResponseEntity;
+&nbsp;import org.springframework.web.bind.annotation.*;
+&nbsp;
+&nbsp;import java.time.LocalDateTime;
+&nbsp;import java.util.*;
+&nbsp;import java.util.stream.Collectors;
+&nbsp;import java.util.stream.IntStream;
+&nbsp;
+&nbsp;@RestController
+&nbsp;@RequestMapping(&quot;/polls&quot;)
+<b class="fc">&nbsp;public class PollController {</b>
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private PollService pollService;
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private PollRepository pollRepository;
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private LocationService locationService;
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private LiveResultsService liveResultsService;
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private UserRepository userRepository;
+&nbsp;
+&nbsp;    // Create endpoints for each poll type
+&nbsp;
+&nbsp;    @PostMapping(&quot;/yesno&quot;)
+&nbsp;    public YesNoPoll createYesNoPoll(@RequestBody Map&lt;String,Object&gt; body) {
+<b class="nc">&nbsp;        String title = (String)body.get(&quot;title&quot;);</b>
+<b class="nc">&nbsp;        String context = (String)body.get(&quot;context&quot;);  // NEW</b>
+<b class="nc">&nbsp;        String visibilityStr = (String)body.getOrDefault(&quot;visibility&quot;, &quot;PUBLIC&quot;);</b>
+<b class="nc">&nbsp;        Poll.Visibility visibility = Poll.Visibility.valueOf(visibilityStr.toUpperCase());</b>
+&nbsp;
+&nbsp;        // get owners emailId from request body
+<b class="nc">&nbsp;        String ownerEmail = (String)body.get(&quot;emailId&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;        YesNoPoll p = new YesNoPoll(title);</b>
+<b class="nc">&nbsp;        p.setContext(context);  // NEW</b>
+<b class="nc">&nbsp;        p.setVisibility(visibility);</b>
+<b class="nc">&nbsp;        p.setCreatedAt(LocalDateTime.now());</b>
+&nbsp;
+<b class="nc">&nbsp;        YesNoPoll created = (YesNoPoll) pollService.createPoll(p, ownerEmail);</b>
+&nbsp;
+&nbsp;        // moderator assignments if provided
+<b class="nc">&nbsp;        if (body.containsKey(&quot;moderators&quot;)) {</b>
+&nbsp;            @SuppressWarnings(&quot;unchecked&quot;)
+<b class="nc">&nbsp;            List&lt;Map&lt;String, String&gt;&gt; mods = (List&lt;Map&lt;String, String&gt;&gt;) body.get(&quot;moderators&quot;);</b>
+<b class="nc">&nbsp;            for (Map&lt;String, String&gt; m : mods) {</b>
+<b class="nc">&nbsp;                String modEmail = m.get(&quot;moderatorEmail&quot;);</b>
+&nbsp;
+&nbsp;                // Check if moderator exists first
+<b class="nc">&nbsp;                if (!userRepository.existsById(modEmail)) {</b>
+<b class="nc">&nbsp;                    System.err.println(&quot;Skipping moderator - user not found: &quot; + modEmail);</b>
+&nbsp;                    continue;
+&nbsp;                }
+&nbsp;
+<b class="nc">&nbsp;                ModeratorAssignmentDTO dto = new ModeratorAssignmentDTO();</b>
+<b class="nc">&nbsp;                dto.setModeratorEmail(modEmail);</b>
+<b class="nc">&nbsp;                dto.setDuration(m.get(&quot;duration&quot;));</b>
+&nbsp;
+&nbsp;                try {
+<b class="nc">&nbsp;                    pollService.assignModerator(created.getId(), ownerEmail, dto);</b>
+&nbsp;                } catch (Exception e) {
+<b class="nc">&nbsp;                    System.err.println(&quot;Moderator assignment failed: &quot; + e.getMessage());</b>
+<b class="nc">&nbsp;                    e.printStackTrace();</b>
+&nbsp;                }
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return created;</b>
+&nbsp;
+&nbsp;    }
+&nbsp;
+&nbsp;    @PostMapping(&quot;/rating&quot;)
+&nbsp;    public RatingPoll createRatingPoll(@RequestBody Map&lt;String,Object&gt; body) {
+<b class="nc">&nbsp;        String title = (String)body.get(&quot;title&quot;);</b>
+<b class="nc">&nbsp;        String context = (String)body.get(&quot;context&quot;);  // NEW</b>
+<b class="nc">&nbsp;        String visibilityStr = (String)body.getOrDefault(&quot;visibility&quot;, &quot;PUBLIC&quot;);</b>
+<b class="nc">&nbsp;        Poll.Visibility visibility = Poll.Visibility.valueOf(visibilityStr.toUpperCase());</b>
+&nbsp;
+&nbsp;        // get owners emailId from request body
+<b class="nc">&nbsp;        String ownerEmail = (String)body.get(&quot;emailId&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;        RatingPoll p = new RatingPoll(title);</b>
+<b class="nc">&nbsp;        p.setContext(context);  // NEW</b>
+<b class="nc">&nbsp;        p.setVisibility(visibility);</b>
+<b class="nc">&nbsp;        p.setCreatedAt(LocalDateTime.now());</b>
+&nbsp;
+<b class="nc">&nbsp;        RatingPoll created = (RatingPoll) pollService.createPoll(p, ownerEmail);</b>
+&nbsp;
+&nbsp;        // moderator assignments if provided
+<b class="nc">&nbsp;        if (body.containsKey(&quot;moderators&quot;)) {</b>
+&nbsp;            @SuppressWarnings(&quot;unchecked&quot;)
+<b class="nc">&nbsp;            List&lt;Map&lt;String, String&gt;&gt; mods = (List&lt;Map&lt;String, String&gt;&gt;) body.get(&quot;moderators&quot;);</b>
+<b class="nc">&nbsp;            for (Map&lt;String, String&gt; m : mods) {</b>
+<b class="nc">&nbsp;                String modEmail = m.get(&quot;moderatorEmail&quot;);</b>
+&nbsp;
+&nbsp;                // Check if moderator exists first
+<b class="nc">&nbsp;                if (!userRepository.existsById(modEmail)) {</b>
+<b class="nc">&nbsp;                    System.err.println(&quot;Skipping moderator - user not found: &quot; + modEmail);</b>
+&nbsp;                    continue;
+&nbsp;                }
+&nbsp;
+<b class="nc">&nbsp;                ModeratorAssignmentDTO dto = new ModeratorAssignmentDTO();</b>
+<b class="nc">&nbsp;                dto.setModeratorEmail(modEmail);</b>
+<b class="nc">&nbsp;                dto.setDuration(m.get(&quot;duration&quot;));</b>
+&nbsp;
+&nbsp;                try {
+<b class="nc">&nbsp;                    pollService.assignModerator(created.getId(), ownerEmail, dto);</b>
+&nbsp;                } catch (Exception e) {
+<b class="nc">&nbsp;                    System.err.println(&quot;Moderator assignment failed: &quot; + e.getMessage());</b>
+<b class="nc">&nbsp;                    e.printStackTrace();</b>
+&nbsp;                }
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return created;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @PostMapping(&quot;/multiple&quot;)
+&nbsp;    public MultipleChoicePoll createMultipleChoicePoll(@RequestBody Map&lt;String,Object&gt; body) {
+<b class="nc">&nbsp;        String title = (String) body.get(&quot;title&quot;);</b>
+<b class="nc">&nbsp;        String context = (String) body.get(&quot;context&quot;);  // NEW</b>
+&nbsp;        @SuppressWarnings(&quot;unchecked&quot;)
+<b class="nc">&nbsp;        List&lt;String&gt; options = (List&lt;String&gt;) body.getOrDefault(&quot;options&quot;, Collections.emptyList());</b>
+<b class="nc">&nbsp;        String visibilityStr = body.containsKey(&quot;visibility&quot;) ? (String) body.get(&quot;visibility&quot;) : &quot;PUBLIC&quot;;</b>
+<b class="nc">&nbsp;        Poll.Visibility visibility = Poll.Visibility.valueOf(visibilityStr.toUpperCase());</b>
+&nbsp;
+&nbsp;        // get owners emailId from request body
+<b class="nc">&nbsp;        String ownerEmail = (String) body.get(&quot;emailId&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;        MultipleChoicePoll p = new MultipleChoicePoll(title, options);</b>
+<b class="nc">&nbsp;        p.setContext(context);  // NEW</b>
+<b class="nc">&nbsp;        p.setVisibility(visibility);</b>
+<b class="nc">&nbsp;        p.setCreatedAt(LocalDateTime.now());</b>
+&nbsp;
+<b class="nc">&nbsp;        MultipleChoicePoll created = (MultipleChoicePoll) pollService.createPoll(p, ownerEmail);</b>
+&nbsp;
+&nbsp;        // moderator assignments if provided
+<b class="nc">&nbsp;        if (body.containsKey(&quot;moderators&quot;)) {</b>
+&nbsp;            @SuppressWarnings(&quot;unchecked&quot;)
+<b class="nc">&nbsp;            List&lt;Map&lt;String, String&gt;&gt; mods = (List&lt;Map&lt;String, String&gt;&gt;) body.get(&quot;moderators&quot;);</b>
+<b class="nc">&nbsp;            for (Map&lt;String, String&gt; m : mods) {</b>
+<b class="nc">&nbsp;                String modEmail = m.get(&quot;moderatorEmail&quot;);</b>
+&nbsp;
+&nbsp;                // Check if moderator exists first
+<b class="nc">&nbsp;                if (!userRepository.existsById(modEmail)) {</b>
+<b class="nc">&nbsp;                    System.err.println(&quot;Skipping moderator - user not found: &quot; + modEmail);</b>
+&nbsp;                    continue;
+&nbsp;                }
+&nbsp;
+<b class="nc">&nbsp;                ModeratorAssignmentDTO dto = new ModeratorAssignmentDTO();</b>
+<b class="nc">&nbsp;                dto.setModeratorEmail(modEmail);</b>
+<b class="nc">&nbsp;                dto.setDuration(m.get(&quot;duration&quot;));</b>
+&nbsp;
+&nbsp;                try {
+<b class="nc">&nbsp;                    pollService.assignModerator(created.getId(), ownerEmail, dto);</b>
+&nbsp;                } catch (Exception e) {
+<b class="nc">&nbsp;                    System.err.println(&quot;Moderator assignment failed: &quot; + e.getMessage());</b>
+<b class="nc">&nbsp;                    e.printStackTrace();</b>
+&nbsp;                }
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return created;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @PostMapping(&quot;/ranking&quot;)
+&nbsp;    public RankingPoll createRankingPoll(@RequestBody Map&lt;String,Object&gt; body) {
+<b class="nc">&nbsp;        String title = (String) body.get(&quot;title&quot;);</b>
+<b class="nc">&nbsp;        String context = (String) body.get(&quot;context&quot;);  // NEW</b>
+&nbsp;        @SuppressWarnings(&quot;unchecked&quot;)
+<b class="nc">&nbsp;        List&lt;String&gt; options = (List&lt;String&gt;) body.getOrDefault(&quot;options&quot;, Collections.emptyList());</b>
+<b class="nc">&nbsp;        String visibilityStr = body.containsKey(&quot;visibility&quot;) ? (String) body.get(&quot;visibility&quot;) : &quot;PUBLIC&quot;;</b>
+<b class="nc">&nbsp;        Poll.Visibility visibility = Poll.Visibility.valueOf(visibilityStr.toUpperCase());</b>
+&nbsp;
+&nbsp;        // get owners emailId from request body
+<b class="nc">&nbsp;        String ownerEmail = (String) body.get(&quot;emailId&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;        RankingPoll p = new RankingPoll(title, options);</b>
+<b class="nc">&nbsp;        p.setContext(context);  // NEW</b>
+<b class="nc">&nbsp;        p.setVisibility(visibility);</b>
+<b class="nc">&nbsp;        p.setCreatedAt(LocalDateTime.now());</b>
+&nbsp;
+<b class="nc">&nbsp;        RankingPoll created = (RankingPoll) pollService.createPoll(p, ownerEmail);</b>
+&nbsp;
+&nbsp;        // moderator assignments if provided
+<b class="nc">&nbsp;        if (body.containsKey(&quot;moderators&quot;)) {</b>
+&nbsp;            @SuppressWarnings(&quot;unchecked&quot;)
+<b class="nc">&nbsp;            List&lt;Map&lt;String, String&gt;&gt; mods = (List&lt;Map&lt;String, String&gt;&gt;) body.get(&quot;moderators&quot;);</b>
+<b class="nc">&nbsp;            for (Map&lt;String, String&gt; m : mods) {</b>
+<b class="nc">&nbsp;                String modEmail = m.get(&quot;moderatorEmail&quot;);</b>
+&nbsp;
+&nbsp;                // Check if moderator exists first
+<b class="nc">&nbsp;                if (!userRepository.existsById(modEmail)) {</b>
+<b class="nc">&nbsp;                    System.err.println(&quot;Skipping moderator - user not found: &quot; + modEmail);</b>
+&nbsp;                    continue;
+&nbsp;                }
+&nbsp;
+<b class="nc">&nbsp;                ModeratorAssignmentDTO dto = new ModeratorAssignmentDTO();</b>
+<b class="nc">&nbsp;                dto.setModeratorEmail(modEmail);</b>
+<b class="nc">&nbsp;                dto.setDuration(m.get(&quot;duration&quot;));</b>
+&nbsp;
+&nbsp;                try {
+<b class="nc">&nbsp;                    pollService.assignModerator(created.getId(), ownerEmail, dto);</b>
+&nbsp;                } catch (Exception e) {
+<b class="nc">&nbsp;                    System.err.println(&quot;Moderator assignment failed: &quot; + e.getMessage());</b>
+<b class="nc">&nbsp;                    e.printStackTrace();</b>
+&nbsp;                }
+&nbsp;            }
+&nbsp;        }
+<b class="nc">&nbsp;            return created;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // get all polls depending on visibility and user, and optional filters
+&nbsp;    @GetMapping
+&nbsp;    public List&lt;Poll&gt; getAllPolls(
+&nbsp;            @RequestParam(required = false) String emailId,
+&nbsp;            @RequestParam(required = false) String type,
+&nbsp;            @RequestParam(required = false) Poll.Visibility visibility){
+&nbsp;
+<b class="nc">&nbsp;        List&lt;Poll&gt; allPolls = pollRepository.findAll();</b>
+&nbsp;        List&lt;Poll&gt; accessiblePolls;
+&nbsp;
+<b class="nc">&nbsp;        if (emailId == null || emailId.isEmpty()) {</b>
+&nbsp;            // return only public polls if no emailId provided
+<b class="nc">&nbsp;            accessiblePolls = allPolls.stream()</b>
+<b class="nc">&nbsp;                    .filter(p -&gt; p.getVisibility() == Poll.Visibility.PUBLIC)</b>
+<b class="nc">&nbsp;                    .collect(Collectors.toList());</b>
+&nbsp;        }
+&nbsp;            else {
+&nbsp;            // return public polls and private polls where user is member/owner
+<b class="nc">&nbsp;            accessiblePolls = allPolls.stream()</b>
+<b class="nc">&nbsp;                    .filter(p -&gt; p.getVisibility() == Poll.Visibility.PUBLIC ||</b>
+<b class="nc">&nbsp;                            (pollService.isOwner(p.getId(), emailId) ||</b>
+<b class="nc">&nbsp;                                    pollService.isMember(p.getId(), emailId)))</b>
+<b class="nc">&nbsp;                    .collect(Collectors.toList());</b>
+&nbsp;        }
+&nbsp;        // return with optional filters
+<b class="nc">&nbsp;        return accessiblePolls.stream()</b>
+&nbsp;                // filter by poll type if given
+<b class="nc">&nbsp;                .filter(p -&gt; type == null || type.isBlank() || p.getType().equalsIgnoreCase(type))</b>
+&nbsp;                // filter by visibility if given
+<b class="nc">&nbsp;                .filter(p -&gt; visibility == null || p.getVisibility() == visibility)</b>
+<b class="nc">&nbsp;                .collect(Collectors.toList());</b>
+&nbsp;
+&nbsp;    }
+&nbsp;
+&nbsp;    // get poll by id with visibility checks
+&nbsp;    @GetMapping(&quot;/{id}&quot;)
+&nbsp;    public Object getPoll(
+&nbsp;            @PathVariable Long id,
+&nbsp;            @RequestParam(required = false) String emailId) {
+&nbsp;
+<b class="nc">&nbsp;        Optional&lt;Poll&gt; pollOpt = pollService.findPoll(id);</b>
+<b class="nc">&nbsp;        if (pollOpt.isEmpty()) {</b>
+<b class="nc">&nbsp;            return Map.of(&quot;error&quot;, &quot;Poll not found&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        Poll poll = pollOpt.get();</b>
+&nbsp;
+&nbsp;        // public polls: everyone can see
+<b class="nc">&nbsp;        if (poll.getVisibility() == Poll.Visibility.PUBLIC) {</b>
+<b class="nc">&nbsp;            return poll;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // private polls: only members/owner can see
+<b class="nc">&nbsp;        if (poll.getVisibility() == Poll.Visibility.PRIVATE) {</b>
+<b class="nc">&nbsp;            if (emailId == null || emailId.isEmpty()) {</b>
+<b class="nc">&nbsp;                return Map.of(&quot;error&quot;, &quot;emailId required for private polls&quot;);</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            if (!pollService.isOwner(poll.getId(), emailId) &amp;&amp;</b>
+<b class="nc">&nbsp;                    !pollService.isMember(poll.getId(), emailId)) {</b>
+<b class="nc">&nbsp;                return Map.of(&quot;error&quot;, &quot;Access denied. Not a member of this poll.&quot;);</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            return poll;</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return poll;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;
+&nbsp;    @PostMapping(&quot;/{pollId}/vote/ranking&quot;)
+&nbsp;    public ResponseEntity&lt;?&gt; submitRanking(
+&nbsp;            @PathVariable Long pollId,
+&nbsp;            @RequestParam String userId,
+&nbsp;            @RequestBody List&lt;VoteRequest&gt; rankingVotes) {
+&nbsp;
+&nbsp;        try {
+<b class="nc">&nbsp;            if (rankingVotes.isEmpty()) {</b>
+<b class="nc">&nbsp;                return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, &quot;Empty ranking list&quot;));</b>
+&nbsp;            }
+&nbsp;
+&nbsp;            // fetch the poll to validate options
+<b class="nc">&nbsp;            Optional&lt;Poll&gt; pollOpt = pollService.findPoll(pollId);</b>
+<b class="nc">&nbsp;            if (pollOpt.isEmpty() || !(pollOpt.get() instanceof RankingPoll)) {</b>
+<b class="nc">&nbsp;                return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, &quot;Poll not found or not a ranking poll&quot;));</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            RankingPoll rankingPoll = (RankingPoll) pollOpt.get();</b>
+<b class="nc">&nbsp;            List&lt;String&gt; pollOptions = rankingPoll.getOptions();</b>
+&nbsp;
+&nbsp;            // check if poll is private and user is member
+<b class="nc">&nbsp;            Poll poll = pollOpt.get();</b>
+<b class="nc">&nbsp;            if (poll.getVisibility() == Poll.Visibility.PRIVATE) {</b>
+<b class="nc">&nbsp;                if (!pollService.isOwner(pollId, userId) &amp;&amp; !pollService.isMember(pollId, userId)) {</b>
+<b class="nc">&nbsp;                    return ResponseEntity.status(HttpStatus.FORBIDDEN)</b>
+<b class="nc">&nbsp;                            .body(Map.of(&quot;error&quot;, &quot;Access denied, user must be a member of the poll to vote on private polls.&quot;));</b>
+&nbsp;                }
+&nbsp;            }
+&nbsp;
+&nbsp;            // check length
+<b class="nc">&nbsp;            if (rankingVotes.size() != pollOptions.size()) {</b>
+<b class="nc">&nbsp;                return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, &quot;You must rank all options&quot;));</b>
+&nbsp;            }
+&nbsp;
+&nbsp;            // check content
+<b class="nc">&nbsp;            Set&lt;String&gt; votedOptions = new HashSet&lt;&gt;();</b>
+<b class="nc">&nbsp;            Set&lt;Integer&gt; ranks = new HashSet&lt;&gt;();</b>
+<b class="nc">&nbsp;            for (VoteRequest vr : rankingVotes) {</b>
+<b class="nc">&nbsp;                votedOptions.add(vr.getChoice());</b>
+<b class="nc">&nbsp;                ranks.add(vr.getRank());</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            if (!votedOptions.containsAll(pollOptions) || ranks.size() != pollOptions.size() ||</b>
+<b class="nc">&nbsp;                    !ranks.containsAll(IntStream.rangeClosed(1, pollOptions.size()).boxed().collect(Collectors.toSet()))) {</b>
+<b class="nc">&nbsp;                return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, &quot;Ranking list invalid: must rank all options 1..N exactly once&quot;));</b>
+&nbsp;            }
+&nbsp;
+&nbsp;            // validate location for first vote
+<b class="nc">&nbsp;            VoteRequest first = rankingVotes.get(0);</b>
+<b class="nc">&nbsp;            locationService.validateLocation(first.getLat(), first.getLng());</b>
+&nbsp;
+&nbsp;            // convert VoteRequest list to Vote list
+<b class="nc">&nbsp;            List&lt;Vote&gt; votes = new ArrayList&lt;&gt;();</b>
+<b class="nc">&nbsp;            for (VoteRequest vr : rankingVotes) {</b>
+<b class="nc">&nbsp;                votes.add(new Vote(userId, vr.getChoice(), vr.getRank()));</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            pollService.addRankingVotes(pollId, votes);</b>
+&nbsp;
+&nbsp;            // broadcast live results update
+<b class="nc">&nbsp;            liveResultsService.broadcastResults(pollId);</b>
+&nbsp;
+<b class="nc">&nbsp;            return ResponseEntity.ok(Map.of(&quot;message&quot;, &quot;Ranking submitted&quot;));</b>
+&nbsp;
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;    // cast a vote with location verification
+&nbsp;    // Generic vote endpoint for Yes/No, Rating, Multiple Choice
+&nbsp;    @PostMapping(&quot;/{pollId}/vote&quot;)
+&nbsp;    public Map&lt;String,Object&gt; vote(
+&nbsp;            @PathVariable Long pollId,
+&nbsp;            @RequestParam String userId,
+&nbsp;            @RequestBody VoteRequest voteRequest,
+&nbsp;            @RequestParam(required = false) Integer numericValue,
+&nbsp;            @RequestParam(required = false) String choice) {
+&nbsp;
+<b class="fc">&nbsp;        Map&lt;String, Object&gt; res = new HashMap&lt;&gt;();</b>
+&nbsp;        try {
+&nbsp;
+&nbsp;            // check if poll is private and user is member
+<b class="fc">&nbsp;            Optional&lt;Poll&gt; pollOpt = pollService.findPoll(pollId);</b>
+<b class="pc">&nbsp;            if (pollOpt.isPresent()) {</b>
+<b class="fc">&nbsp;                Poll poll = pollOpt.get();</b>
+<b class="pc">&nbsp;                if (poll.getVisibility() == Poll.Visibility.PRIVATE) {</b>
+<b class="nc">&nbsp;                    if (!pollService.isOwner(pollId, userId) &amp;&amp; !pollService.isMember(pollId, userId)) {</b>
+<b class="nc">&nbsp;                        res.put(&quot;error&quot;, &quot;Access denied, the user must be a member of this poll to vote on private polls.&quot;);</b>
+<b class="nc">&nbsp;                        return res;</b>
+&nbsp;                    }
+&nbsp;                }
+&nbsp;            }
+&nbsp;
+&nbsp;            // validate user location
+<b class="fc">&nbsp;            locationService.validateLocation(voteRequest.getLat(), voteRequest.getLng());</b>
+&nbsp;
+&nbsp;            Vote vote;
+<b class="pc">&nbsp;            if (numericValue != null) {</b>
+<b class="fc">&nbsp;                vote = new Vote(userId, numericValue); // Yes/No or Rating</b>
+<b class="nc">&nbsp;            } else if (choice != null) {</b>
+<b class="nc">&nbsp;                vote = new Vote(userId, choice); // Multiple Choice</b>
+&nbsp;            } else {
+<b class="nc">&nbsp;                throw new IllegalArgumentException(&quot;Invalid vote payload: provide numericValue OR choice.&quot;);</b>
+&nbsp;            }
+&nbsp;
+<b class="fc">&nbsp;            vote.setLatitude(voteRequest.getLat());</b>
+<b class="fc">&nbsp;            vote.setLongitude(voteRequest.getLng());</b>
+&nbsp;
+<b class="fc">&nbsp;            pollService.addVote(pollId, vote);</b>
+&nbsp;
+&nbsp;            // broadcast live results update
+<b class="fc">&nbsp;            liveResultsService.broadcastResults(pollId);</b>
+&nbsp;
+<b class="fc">&nbsp;            res.put(&quot;message&quot;, &quot;Vote added&quot;);</b>
+<b class="fc">&nbsp;            return res;</b>
+&nbsp;
+&nbsp;        } catch (Exception e) {
+<b class="fc">&nbsp;            res.put(&quot;error&quot;, e.getMessage());</b>
+<b class="fc">&nbsp;            return res;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;    @GetMapping(&quot;/{pollId}/user/{userId}&quot;)
+&nbsp;    public Object getUserVote(@PathVariable Long pollId, @PathVariable String userId) {
+<b class="nc">&nbsp;        Optional&lt;Poll&gt; pollOpt = pollService.findPoll(pollId);</b>
+<b class="nc">&nbsp;        if (pollOpt.isEmpty()) return Map.of(&quot;error&quot;, &quot;poll not found&quot;);</b>
+<b class="nc">&nbsp;        Poll poll = pollOpt.get();</b>
+&nbsp;
+<b class="nc">&nbsp;        if (&quot;RANKING&quot;.equals(poll.getType())) {</b>
+<b class="nc">&nbsp;            List&lt;Vote&gt; votes = pollService.getRankingVotesForUser(pollId, userId);</b>
+<b class="nc">&nbsp;            if (votes.isEmpty()) return Map.of(&quot;message&quot;, &quot;User has not voted on this poll yet.&quot;);</b>
+<b class="nc">&nbsp;            List&lt;Map&lt;String, Object&gt;&gt; ranking = votes.stream()</b>
+<b class="nc">&nbsp;                    .map(v -&gt; {</b>
+<b class="nc">&nbsp;                        Map&lt;String, Object&gt; m = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;                        m.put(&quot;choice&quot;, v.getChoice());</b>
+<b class="nc">&nbsp;                        m.put(&quot;rank&quot;, v.getRank());</b>
+<b class="nc">&nbsp;                        return m;</b>
+&nbsp;                    })
+<b class="nc">&nbsp;                    .toList();</b>
+<b class="nc">&nbsp;            Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;            response.put(&quot;pollId&quot;, pollId);</b>
+<b class="nc">&nbsp;            response.put(&quot;userId&quot;, userId);</b>
+<b class="nc">&nbsp;            response.put(&quot;ranking&quot;, ranking);</b>
+<b class="nc">&nbsp;            return response;</b>
+&nbsp;        } else {
+<b class="nc">&nbsp;            Vote vote = pollService.getUserVote(pollId, userId);</b>
+<b class="nc">&nbsp;            if (vote == null) return Map.of(&quot;message&quot;, &quot;User has not voted on this poll yet.&quot;);</b>
+<b class="nc">&nbsp;            Map&lt;String, Object&gt; voteResponse = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;            voteResponse.put(&quot;id&quot;, vote.getId());</b>
+<b class="nc">&nbsp;            voteResponse.put(&quot;userId&quot;, vote.getUserId());</b>
+<b class="nc">&nbsp;            voteResponse.put(&quot;choice&quot;, vote.getChoice());</b>
+<b class="nc">&nbsp;            voteResponse.put(&quot;numericValue&quot;, vote.getNumericValue());</b>
+<b class="nc">&nbsp;            voteResponse.put(&quot;rank&quot;, vote.getRank());</b>
+<b class="nc">&nbsp;            return voteResponse;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;    // results endpoint - delegates to service and chooses strategy by poll type
+&nbsp;    @GetMapping(&quot;/{pollId}/results&quot;)
+&nbsp;    public Object getResults(@PathVariable Long pollId, @RequestParam(required = false) String emailId) {
+<b class="fc">&nbsp;        Optional&lt;Poll&gt; op = pollService.findPoll(pollId);</b>
+<b class="pc">&nbsp;        if (op.isEmpty()) return Map.of(&quot;error&quot;, &quot;poll not found&quot;);</b>
+&nbsp;
+<b class="fc">&nbsp;        Poll poll = op.get();</b>
+&nbsp;
+&nbsp;        // check if private poll
+<b class="pc">&nbsp;        if (poll.getVisibility() == Poll.Visibility.PRIVATE) {</b>
+<b class="pc">&nbsp;            if (emailId == null || emailId.isEmpty()) {</b>
+<b class="nc">&nbsp;                return Map.of(&quot;error&quot;, &quot;emailId required for private polls&quot;);</b>
+&nbsp;            }
+<b class="pc">&nbsp;            if (!pollService.isOwner(pollId, emailId) &amp;&amp; !pollService.isMember(pollId, emailId)) {</b>
+<b class="fc">&nbsp;                return Map.of(&quot;error&quot;, &quot;Access denied, the user is not a member of this poll.&quot;);</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        String type = poll.getType();</b>
+<b class="pc">&nbsp;        switch (type) {</b>
+&nbsp;            case &quot;YES_NO&quot;:
+<b class="nc">&nbsp;                return pollService.getYesNoStats(pollId);</b>
+&nbsp;            case &quot;RATING&quot;:
+<b class="nc">&nbsp;                return pollService.getRatingStats(pollId);</b>
+&nbsp;            case &quot;MULTIPLE_CHOICE&quot;:
+&nbsp;                // fetch options from concrete type
+<b class="nc">&nbsp;                MultipleChoicePoll mcp = (MultipleChoicePoll) poll;</b>
+<b class="nc">&nbsp;                return pollService.getMultipleChoiceStats(pollId, mcp.getOptions());</b>
+&nbsp;            case &quot;RANKING&quot;:
+<b class="fc">&nbsp;                RankingPoll r = (RankingPoll) poll;</b>
+<b class="fc">&nbsp;                return pollService.getRankingStats(pollId, r.getOptions().size());</b>
+&nbsp;            default:
+<b class="nc">&nbsp;                return Map.of(&quot;error&quot;, &quot;unknown poll type&quot;);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    // close poll
+&nbsp;    @PutMapping(&quot;/{pollId}/close&quot;)
+&nbsp;    public Map&lt;String,String&gt; closePoll(@PathVariable Long pollId) {
+<b class="nc">&nbsp;        Map&lt;String,String&gt; res = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;        Optional&lt;Poll&gt; op = pollService.findPoll(pollId);</b>
+<b class="nc">&nbsp;        if (op.isEmpty()) {</b>
+<b class="nc">&nbsp;            res.put(&quot;error&quot;, &quot;not found&quot;);</b>
+<b class="nc">&nbsp;            return res;</b>
+&nbsp;        }
+<b class="nc">&nbsp;        Poll p = op.get();</b>
+<b class="nc">&nbsp;        p.setActive(false);</b>
+<b class="nc">&nbsp;        pollRepository.save(p);</b>
+&nbsp;
+&nbsp;        // broadcast that status changed to closed
+<b class="nc">&nbsp;        liveResultsService.broadcastResults(pollId);</b>
+<b class="nc">&nbsp;        res.put(&quot;message&quot;, &quot;poll closed&quot;);</b>
+<b class="nc">&nbsp;        return res;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @DeleteMapping(&quot;/{pollId}/user/{userId}&quot;)
+&nbsp;    public Map&lt;String, String&gt; deleteUserVote(@PathVariable Long pollId, @PathVariable String userId) {
+<b class="nc">&nbsp;        Map&lt;String, String&gt; res = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;        Optional&lt;Poll&gt; pollOpt = pollService.findPoll(pollId);</b>
+<b class="nc">&nbsp;        if (pollOpt.isEmpty()) {</b>
+<b class="nc">&nbsp;            res.put(&quot;error&quot;, &quot;Poll not found&quot;);</b>
+<b class="nc">&nbsp;            return res;</b>
+&nbsp;        }
+<b class="nc">&nbsp;        Poll poll = pollOpt.get();</b>
+<b class="nc">&nbsp;        boolean isRanking = &quot;RANKING&quot;.equals(poll.getType());</b>
+&nbsp;
+&nbsp;        try {
+<b class="nc">&nbsp;            boolean deleted = pollService.deleteUserVote(pollId, userId, isRanking);</b>
+<b class="nc">&nbsp;            if (deleted) {</b>
+&nbsp;                // broadcast updated results
+<b class="nc">&nbsp;                liveResultsService.broadcastResults(pollId);</b>
+<b class="nc">&nbsp;                res.put(&quot;message&quot;, &quot;Vote deleted&quot;);</b>
+&nbsp;            } else {
+<b class="nc">&nbsp;                res.put(&quot;error&quot;, &quot;Vote not found&quot;);</b>
+&nbsp;            }
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            res.put(&quot;error&quot;, e.getMessage());</b>
+&nbsp;        }
+<b class="nc">&nbsp;        return res;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @PostMapping(&quot;/join&quot;)
+&nbsp;    public Map&lt;String, Object&gt; joinPoll(@RequestBody Map&lt;String, String&gt; body) {
+<b class="nc">&nbsp;        String code = body.get(&quot;code&quot;);</b>
+<b class="nc">&nbsp;        String emailId = body.get(&quot;emailId&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</b>
+&nbsp;
+<b class="nc">&nbsp;        if (code == null || code.isEmpty()) {</b>
+<b class="nc">&nbsp;            response.put(&quot;error&quot;, &quot;Access code required&quot;);</b>
+<b class="nc">&nbsp;            return response;</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        if (emailId == null || emailId.isEmpty()) {</b>
+<b class="nc">&nbsp;            response.put(&quot;error&quot;, &quot;emailId required&quot;);</b>
+<b class="nc">&nbsp;            return response;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        try {
+<b class="nc">&nbsp;            Poll poll = pollService.joinPoll(code, emailId);</b>
+<b class="nc">&nbsp;            response.put(&quot;pollId&quot;, poll.getId());</b>
+<b class="nc">&nbsp;            response.put(&quot;title&quot;, poll.getTitle());</b>
+<b class="nc">&nbsp;            response.put(&quot;visibility&quot;, poll.getVisibility().toString());</b>
+<b class="nc">&nbsp;            return response;</b>
+&nbsp;        } catch (IllegalArgumentException e) {
+<b class="nc">&nbsp;            response.put(&quot;error&quot;, e.getMessage());</b>
+<b class="nc">&nbsp;            return response;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    @PostMapping(&quot;/{id}/rotate-code&quot;)
+&nbsp;    public Map&lt;String, String&gt; rotateAccessCode(
+&nbsp;            @PathVariable Long id,
+&nbsp;            @RequestBody Map&lt;String, String&gt; body) {
+&nbsp;
+<b class="nc">&nbsp;        String emailId = body.get(&quot;emailId&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;        Map&lt;String, String&gt; response = new HashMap&lt;&gt;();</b>
+&nbsp;
+<b class="nc">&nbsp;        if (emailId == null || emailId.isEmpty()) {</b>
+<b class="nc">&nbsp;            response.put(&quot;error&quot;, &quot;emailId required&quot;);</b>
+<b class="nc">&nbsp;            return response;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        try {
+<b class="nc">&nbsp;            String newCode = pollService.rotateAccessCode(id, emailId);</b>
+<b class="nc">&nbsp;            response.put(&quot;accessCode&quot;, newCode);</b>
+<b class="nc">&nbsp;            return response;</b>
+&nbsp;        } catch (IllegalArgumentException e) {
+<b class="nc">&nbsp;            response.put(&quot;error&quot;, e.getMessage());</b>
+<b class="nc">&nbsp;            return response;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    @GetMapping(&quot;/{pollId}/access-code&quot;)
+&nbsp;    public Map&lt;String, String&gt; getAccessCode(@PathVariable Long pollId,
+&nbsp;                                             @RequestParam String emailId) {
+<b class="nc">&nbsp;        Map&lt;String, String&gt; response = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;        if (emailId == null || emailId.isEmpty()) {</b>
+<b class="nc">&nbsp;            response.put(&quot;error&quot;, &quot;emailId required&quot;);</b>
+<b class="nc">&nbsp;            return response;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        try {
+<b class="nc">&nbsp;            String code = pollService.getAccessCode(pollId, emailId); // only owner can access</b>
+<b class="nc">&nbsp;            response.put(&quot;accessCode&quot;, code);</b>
+<b class="nc">&nbsp;            return response;</b>
+&nbsp;        } catch (IllegalArgumentException e) {
+<b class="nc">&nbsp;            response.put(&quot;error&quot;, e.getMessage());</b>
+<b class="nc">&nbsp;            return response;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /* ------------------------------------------------------------*/
+&nbsp;    /*  ACCESS LEVEL ENDPOINTS                                     */
+&nbsp;    /* ------------------------------------------------------------ */
+&nbsp;
+&nbsp;    // edit a poll (owner or moderator)
+&nbsp;    @PutMapping(&quot;/{pollId}/edit&quot;)
+&nbsp;    public ResponseEntity&lt;?&gt; editPoll(
+&nbsp;            @PathVariable Long pollId,
+&nbsp;            @RequestParam String emailId,
+&nbsp;            @RequestBody Map&lt;String, Object&gt; updates) {
+&nbsp;
+&nbsp;        try {
+<b class="nc">&nbsp;            Poll updatedPoll = pollService.updatePoll(pollId, emailId, updates);</b>
+&nbsp;
+<b class="nc">&nbsp;            Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;            response.put(&quot;message&quot;, &quot;Poll updated successfully&quot;);</b>
+<b class="nc">&nbsp;            response.put(&quot;pollId&quot;, updatedPoll.getId());</b>
+<b class="nc">&nbsp;            response.put(&quot;title&quot;, updatedPoll.getTitle());</b>
+<b class="nc">&nbsp;            response.put(&quot;type&quot;, updatedPoll.getType());</b>
+&nbsp;
+<b class="nc">&nbsp;            return ResponseEntity.ok(response);</b>
+&nbsp;        } catch (IllegalArgumentException e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.FORBIDDEN)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        } catch (NoSuchElementException e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.NOT_FOUND)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, &quot;Failed to update poll: &quot; + e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    // delete a poll (owner only)
+&nbsp;    @DeleteMapping(&quot;/{pollId}&quot;)
+&nbsp;    public ResponseEntity&lt;?&gt; deletePoll(
+&nbsp;            @PathVariable Long pollId,
+&nbsp;            @RequestParam String emailId) {
+&nbsp;
+&nbsp;        try {
+<b class="nc">&nbsp;            pollService.deletePoll(pollId, emailId);</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(Map.of(&quot;message&quot;, &quot;Poll deleted successfully&quot;));</b>
+&nbsp;        } catch (IllegalArgumentException e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.FORBIDDEN)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        } catch (NoSuchElementException e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.NOT_FOUND)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, &quot;Failed to delete poll: &quot; + e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;
+&nbsp;    // assign a moderator to a poll
+&nbsp;    @PostMapping(&quot;/{pollId}/moderators&quot;)
+&nbsp;    public ResponseEntity&lt;?&gt; assignModerator(
+&nbsp;            @PathVariable Long pollId,
+&nbsp;            @RequestParam String emailId,
+&nbsp;            @RequestBody ModeratorAssignmentDTO moderatorDto) {
+&nbsp;
+&nbsp;        try {
+<b class="nc">&nbsp;            PollModerator moderator = pollService.assignModerator(pollId, emailId, moderatorDto);</b>
+&nbsp;
+<b class="nc">&nbsp;            Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;            response.put(&quot;message&quot;, &quot;Moderator assigned successfully&quot;);</b>
+<b class="nc">&nbsp;            response.put(&quot;moderatorEmail&quot;, moderator.getModeratorEmail());</b>
+<b class="nc">&nbsp;            response.put(&quot;expiresAt&quot;, moderator.getExpiresAt());</b>
+<b class="nc">&nbsp;            response.put(&quot;isForeverAccess&quot;, moderator.isForeverAccess());</b>
+&nbsp;
+<b class="nc">&nbsp;            return ResponseEntity.ok(response);</b>
+&nbsp;        } catch (IllegalArgumentException e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.FORBIDDEN)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        } catch (NoSuchElementException e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.NOT_FOUND)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.BAD_REQUEST)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    // remove a moderator from a poll
+&nbsp;    @DeleteMapping(&quot;/{pollId}/moderators/{moderatorEmail}&quot;)
+&nbsp;    public ResponseEntity&lt;?&gt; removeModerator(
+&nbsp;            @PathVariable Long pollId,
+&nbsp;            @PathVariable String moderatorEmail,
+&nbsp;            @RequestParam String emailId) {
+&nbsp;
+&nbsp;        try {
+<b class="nc">&nbsp;            pollService.removeModerator(pollId, emailId, moderatorEmail);</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(Map.of(&quot;message&quot;, &quot;Moderator removed successfully&quot;));</b>
+&nbsp;        } catch (IllegalArgumentException e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.FORBIDDEN)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        } catch (NoSuchElementException e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.NOT_FOUND)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, &quot;Failed to remove moderator: &quot; + e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    // get all moderators for a poll (owner only)
+&nbsp;    @GetMapping(&quot;/{pollId}/moderators&quot;)
+&nbsp;    public ResponseEntity&lt;?&gt; getPollModerators(
+&nbsp;            @PathVariable Long pollId,
+&nbsp;            @RequestParam String emailId) {
+&nbsp;
+&nbsp;        try {
+<b class="nc">&nbsp;            List&lt;PollModerator&gt; moderators = pollService.getPollModerators(pollId, emailId);</b>
+&nbsp;
+<b class="nc">&nbsp;            List&lt;Map&lt;String, Object&gt;&gt; moderatorList = moderators.stream()</b>
+<b class="nc">&nbsp;                    .map(mod -&gt; {</b>
+<b class="nc">&nbsp;                        Map&lt;String, Object&gt; modData = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;                        modData.put(&quot;moderatorEmail&quot;, mod.getModeratorEmail());</b>
+<b class="nc">&nbsp;                        modData.put(&quot;assignedAt&quot;, mod.getAssignedAt());</b>
+<b class="nc">&nbsp;                        modData.put(&quot;expiresAt&quot;, mod.getExpiresAt());</b>
+<b class="nc">&nbsp;                        modData.put(&quot;isForeverAccess&quot;, mod.isForeverAccess());</b>
+<b class="nc">&nbsp;                        modData.put(&quot;isCurrentlyValid&quot;, mod.isCurrentlyValid());</b>
+<b class="nc">&nbsp;                        return modData;</b>
+&nbsp;                    })
+<b class="nc">&nbsp;                    .collect(Collectors.toList());</b>
+&nbsp;
+<b class="nc">&nbsp;            return ResponseEntity.ok(Map.of(&quot;moderators&quot;, moderatorList));</b>
+&nbsp;        } catch (IllegalArgumentException e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.FORBIDDEN)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        } catch (NoSuchElementException e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.NOT_FOUND)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, &quot;Failed to get moderators: &quot; + e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    // get all polls a user has access to
+&nbsp;    @GetMapping(&quot;/user/{emailId}/accessible&quot;)
+&nbsp;    public ResponseEntity&lt;?&gt; getUserAccessiblePolls(@PathVariable String emailId) {
+&nbsp;        try {
+<b class="nc">&nbsp;            List&lt;Map&lt;String, Object&gt;&gt; polls = pollService.getUserAccessiblePolls(emailId);</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(Map.of(&quot;polls&quot;, polls));</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, &quot;Failed to fetch accessible polls: &quot; + e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    // check a users access level for a poll
+&nbsp;    @GetMapping(&quot;/{pollId}/access-level&quot;)
+&nbsp;    public ResponseEntity&lt;?&gt; checkAccessLevel(
+&nbsp;            @PathVariable Long pollId,
+&nbsp;            @RequestParam String emailId) {
+&nbsp;
+&nbsp;        try {
+<b class="nc">&nbsp;            boolean isOwner = pollService.isPollOwner(pollId, emailId);</b>
+<b class="nc">&nbsp;            boolean isModerator = pollService.isPollModerator(pollId, emailId);</b>
+<b class="nc">&nbsp;            boolean canEdit = pollService.canEditPoll(pollId, emailId);</b>
+<b class="nc">&nbsp;            boolean canDelete = pollService.canDeletePoll(pollId, emailId);</b>
+&nbsp;
+<b class="nc">&nbsp;            String role = isOwner ? &quot;OWNER&quot; : (isModerator ? &quot;MODERATOR&quot; : &quot;USER&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;            Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;            response.put(&quot;pollId&quot;, pollId);</b>
+<b class="nc">&nbsp;            response.put(&quot;userEmail&quot;, emailId);</b>
+<b class="nc">&nbsp;            response.put(&quot;role&quot;, role);</b>
+<b class="nc">&nbsp;            response.put(&quot;canEdit&quot;, canEdit);</b>
+<b class="nc">&nbsp;            response.put(&quot;canDelete&quot;, canDelete);</b>
+<b class="nc">&nbsp;            response.put(&quot;isOwner&quot;, isOwner);</b>
+<b class="nc">&nbsp;            response.put(&quot;isModerator&quot;, isModerator);</b>
+&nbsp;
+<b class="nc">&nbsp;            return ResponseEntity.ok(response);</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</b>
+<b class="nc">&nbsp;                    .body(Map.of(&quot;error&quot;, &quot;Failed to check access level: &quot; + e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    // helper method for creatin polls to assign moderators from a list
+&nbsp;    private void assignModeratorsFromList(Long pollId, String ownerEmail, List&lt;ModeratorAssignmentDTO&gt; moderators) {
+<b class="nc">&nbsp;        for (ModeratorAssignmentDTO dto : moderators) {</b>
+&nbsp;            try {
+<b class="nc">&nbsp;                pollService.assignModerator(pollId, ownerEmail, dto);</b>
+&nbsp;            } catch (Exception e) {
+<b class="nc">&nbsp;                System.err.println(&quot;Failed to assign moderator: &quot; + dto.getModeratorEmail() + &quot; → &quot; + e.getMessage());</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

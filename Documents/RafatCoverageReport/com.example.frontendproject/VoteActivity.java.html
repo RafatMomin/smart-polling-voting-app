@@ -1,0 +1,916 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>VoteActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debug</a> &gt; <a href="index.source.html" class="el_package">com.example.frontendproject</a> &gt; <span class="el_source">VoteActivity.java</span></div><h1>VoteActivity.java</h1><pre class="source lang-java linenums">package com.example.frontendproject;
+
+import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.Gravity;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.NumberPicker;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.RatingBar;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.Request;
+import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.StringRequest;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Merged VoteActivity:
+ * - Voting UI (YES_NO, RATING, MULTIPLE_CHOICE, RANKING)
+ * - Results screen button
+ * - Rotate Access Code (owner-only) + fetch code dialog
+ * - Live Discussion FAB (discover discussion, join, open LiveDiscussionActivity)
+ * - Polling Window / Access-Level gating (enables/disables voting for user)
+ * - Admin detection to bypass window gate
+ */
+<span class="fc" id="L49">public class VoteActivity extends AppCompatActivity {</span>
+
+    // ---- Intent data ----
+<span class="fc" id="L52">    private int pollId = -1;</span>
+<span class="fc" id="L53">    private String pollTitle = &quot;&quot;;</span>
+<span class="fc" id="L54">    private String pollType = &quot;&quot;;</span>
+    private ArrayList&lt;String&gt; pollOptions;
+
+    // ---- Extras (optional) ----
+<span class="fc" id="L58">    private double latExtra = Double.NaN;</span>
+<span class="fc" id="L59">    private double lngExtra = Double.NaN;</span>
+
+    // ---- UI refs ----
+    private TextView txtTitle;
+    private TextView chipType;
+    private TextView chipStatus;
+    private LinearLayout container;
+    private Button btnSubmit;
+    private Button btnResults;
+
+    private RadioGroup rgYesNo;
+    private RatingBar ratingBar;
+    private RadioGroup rgChoices;
+
+    private static class RankRow {
+        String option;
+        NumberPicker picker;
+    }
+<span class="fc" id="L77">    private final ArrayList&lt;RankRow&gt; rankRows = new ArrayList&lt;&gt;();</span>
+
+    private SessionManager session;
+<span class="fc" id="L80">    private boolean isAdmin = false;</span>
+
+    // ---- Network constants ----
+    private static final String BASE = &quot;http://coms-3090-036.class.las.iastate.edu:8080&quot;;
+
+    // ---- Menu constants ----
+    private static final int MENU_ROTATE_CODE = 2001;
+
+    @Override
+    protected void onCreate(Bundle b) {
+<span class="fc" id="L90">        super.onCreate(b);</span>
+<span class="fc" id="L91">        session = new SessionManager(this);</span>
+<span class="fc" id="L92">        Log.d(&quot;SESSION_TOKEN_CHECK&quot;, &quot;Token in session = &quot; + session.getToken());</span>
+
+        // Read intent data
+<span class="fc" id="L95">        pollId = getIntent().getIntExtra(&quot;pollId&quot;, -1);</span>
+<span class="fc" id="L96">        pollTitle = getIntent().getStringExtra(&quot;title&quot;);</span>
+<span class="fc" id="L97">        pollType = getIntent().getStringExtra(&quot;type&quot;);</span>
+<span class="fc" id="L98">        pollOptions = getIntent().getStringArrayListExtra(&quot;options&quot;);</span>
+<span class="fc" id="L99">        latExtra = getIntent().getDoubleExtra(&quot;lat&quot;, Double.NaN);</span>
+<span class="fc" id="L100">        lngExtra = getIntent().getDoubleExtra(&quot;lng&quot;, Double.NaN);</span>
+
+<span class="fc" id="L102">        boolean inflated = tryInflateXml();</span>
+<span class="pc bpc" id="L103" title="1 of 2 branches missed.">        if (!inflated) {</span>
+<span class="nc" id="L104">            buildFallbackUi();</span>
+<span class="nc" id="L105">            return;</span>
+        }
+
+<span class="pc bpc" id="L108" title="1 of 2 branches missed.">        if (txtTitle != null) {</span>
+<span class="pc bpc" id="L109" title="1 of 2 branches missed.">            txtTitle.setText(pollTitle != null ? pollTitle : &quot;&quot;);</span>
+        }
+<span class="pc bpc" id="L111" title="1 of 2 branches missed.">        if (chipType != null) {</span>
+<span class="pc bpc" id="L112" title="1 of 2 branches missed.">            chipType.setText(pollType != null ? pollType : &quot;&quot;);</span>
+        }
+<span class="pc bpc" id="L114" title="1 of 2 branches missed.">        if (chipStatus != null) chipStatus.setText(&quot;Online&quot;);</span>
+
+<span class="fc" id="L116">        buildInputsForType();</span>
+
+        // Gate UI by polling window/access-level (non-admin users)
+<span class="fc" id="L119">        checkWindowStatus();</span>
+        // Load admin status (admins always can vote)
+<span class="fc" id="L121">        loadAdminStatus();</span>
+
+        // Actions
+<span class="pc" id="L124">        btnSubmit.setOnClickListener(v -&gt; doSubmit());</span>
+<span class="pc" id="L125">        btnResults.setOnClickListener(v -&gt; openResults());</span>
+
+        // Live Discussion FAB (if present in layout)
+<span class="fc" id="L128">        FloatingActionButton fabLiveDiscussion = findViewById(R.id.fabLiveDiscussion);</span>
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">        if (fabLiveDiscussion != null) {</span>
+<span class="fc" id="L130">            fabLiveDiscussion.setOnClickListener(v -&gt; {</span>
+<span class="nc" id="L131">                Log.d(&quot;FAB_CLICK&quot;, &quot;Live Discussion FAB pressed&quot;);</span>
+<span class="nc" id="L132">                startDiscussion();</span>
+<span class="nc" id="L133">            });</span>
+        }
+<span class="fc" id="L135">    }</span>
+
+    // ----------------------------
+    // Admin &amp; Polling Window logic
+    // ----------------------------
+
+    private void loadAdminStatus() {
+<span class="pc bpc" id="L142" title="1 of 2 branches missed.">        if (pollId &lt;= 0) return;</span>
+
+<span class="fc" id="L144">        String url = BASE + &quot;/polls/&quot; + pollId;</span>
+<span class="fc" id="L145">        StringRequest req = new StringRequest(Request.Method.GET, url,</span>
+                resp -&gt; {
+                    try {
+<span class="fc" id="L148">                        JSONObject obj = new JSONObject(resp);</span>
+<span class="fc" id="L149">                        JSONArray admins = obj.optJSONArray(&quot;admins&quot;);</span>
+
+<span class="fc" id="L151">                        String me = session.getEmail();</span>
+<span class="pc bpc" id="L152" title="2 of 4 branches missed.">                        if (me == null || me.trim().isEmpty()) me = session.getUserId();</span>
+
+<span class="pc bpc" id="L154" title="3 of 4 branches missed.">                        if (admins != null &amp;&amp; me != null) {</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">                            for (int i = 0; i &lt; admins.length(); i++) {</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">                                if (me.equalsIgnoreCase(admins.getString(i))) {</span>
+<span class="nc" id="L157">                                    isAdmin = true;</span>
+<span class="nc" id="L158">                                    break;</span>
+                                }
+                            }
+                        }
+<span class="pc" id="L162">                    } catch (Exception ignore) {}</span>
+                    // Re-evaluate window with admin flag
+<span class="fc" id="L164">                    checkWindowStatus();</span>
+<span class="fc" id="L165">                },</span>
+<span class="nc" id="L166">                err -&gt; checkWindowStatus()</span>
+        );
+<span class="fc" id="L168">        AppRequestQueue.get(this).add(req);</span>
+<span class="fc" id="L169">    }</span>
+
+    private void checkWindowStatus() {
+        // Admins can always vote
+<span class="pc bpc" id="L173" title="1 of 2 branches missed.">        if (isAdmin) {</span>
+<span class="nc" id="L174">            enableVotingUi();</span>
+<span class="nc" id="L175">            return;</span>
+        }
+
+<span class="fc" id="L178">        String user = session.getEmail();</span>
+<span class="pc bpc" id="L179" title="2 of 4 branches missed.">        if (user == null || user.trim().isEmpty()) user = session.getUserId();</span>
+<span class="pc bpc" id="L180" title="3 of 6 branches missed.">        if (pollId &lt;= 0 || user == null || user.trim().isEmpty()) {</span>
+<span class="nc" id="L181">            disableVotingUi(&quot;Invalid poll/user context.&quot;);</span>
+<span class="nc" id="L182">            return;</span>
+        }
+
+<span class="fc" id="L185">        String url = BASE + &quot;/polling-windows/poll/&quot; + pollId;</span>
+
+<span class="fc" id="L187">        String finalUser = user;</span>
+<span class="fc" id="L188">        JsonArrayRequest req = new JsonArrayRequest(</span>
+                Request.Method.GET, url, null,
+                arr -&gt; {
+                    try {
+<span class="fc bfc" id="L192" title="All 2 branches covered.">                        if (arr.length() == 0) {</span>
+<span class="fc" id="L193">                            disableVotingUi(&quot;This poll has no active voting window.&quot;);</span>
+<span class="fc" id="L194">                            return;</span>
+                        }
+
+<span class="fc" id="L197">                        JSONObject winObj = arr.getJSONObject(0);</span>
+<span class="fc" id="L198">                        boolean withinTime = winObj.optBoolean(&quot;withinTimeWindow&quot;, false);</span>
+
+<span class="fc" id="L200">                        JSONObject windowData = winObj.optJSONObject(&quot;window&quot;);</span>
+<span class="pc bpc" id="L201" title="1 of 2 branches missed.">                        if (windowData == null) {</span>
+<span class="nc" id="L202">                            disableVotingUi(&quot;Invalid poll window.&quot;);</span>
+<span class="nc" id="L203">                            return;</span>
+                        }
+
+<span class="fc" id="L206">                        String creatorEmail = windowData.optString(&quot;creatorEmail&quot;, &quot;&quot;);</span>
+<span class="fc" id="L207">                        boolean isCreator = finalUser.equalsIgnoreCase(creatorEmail);</span>
+
+<span class="fc" id="L209">                        boolean isAssigned = false;</span>
+<span class="fc" id="L210">                        JSONArray groups = windowData.optJSONArray(&quot;targetGroups&quot;);</span>
+<span class="pc bpc" id="L211" title="1 of 2 branches missed.">                        if (groups != null) {</span>
+                            outer:
+<span class="fc bfc" id="L213" title="All 2 branches covered.">                            for (int g = 0; g &lt; groups.length(); g++) {</span>
+<span class="fc" id="L214">                                JSONObject group = groups.optJSONObject(g);</span>
+<span class="pc bpc" id="L215" title="1 of 2 branches missed.">                                if (group == null) continue;</span>
+<span class="fc" id="L216">                                JSONArray members = group.optJSONArray(&quot;memberEmails&quot;);</span>
+<span class="pc bpc" id="L217" title="1 of 2 branches missed.">                                if (members != null) {</span>
+<span class="fc bfc" id="L218" title="All 2 branches covered.">                                    for (int m = 0; m &lt; members.length(); m++) {</span>
+<span class="pc bpc" id="L219" title="1 of 2 branches missed.">                                        if (finalUser.equalsIgnoreCase(members.getString(m))) {</span>
+<span class="nc" id="L220">                                            isAssigned = true;</span>
+<span class="nc" id="L221">                                            break outer;</span>
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+<span class="pc bpc" id="L228" title="4 of 6 branches missed.">                        if (isCreator || (isAssigned &amp;&amp; withinTime)) {</span>
+<span class="nc" id="L229">                            enableVotingUi();</span>
+                        } else {
+<span class="fc" id="L231">                            disableVotingUi(&quot;You are not allowed to vote in this poll.&quot;);</span>
+                        }
+
+<span class="nc" id="L234">                    } catch (Exception e) {</span>
+<span class="nc" id="L235">                        disableVotingUi(&quot;Error checking poll window.&quot;);</span>
+<span class="fc" id="L236">                    }</span>
+<span class="fc" id="L237">                },</span>
+<span class="nc" id="L238">                err -&gt; disableVotingUi(&quot;Failed to validate access.&quot;)</span>
+        );
+<span class="fc" id="L240">        AppRequestQueue.get(this).add(req);</span>
+<span class="fc" id="L241">    }</span>
+
+    private void disableVotingUi(String msg) {
+<span class="fc" id="L244">        Toast.makeText(this, msg, Toast.LENGTH_LONG).show();</span>
+<span class="pc bpc" id="L245" title="1 of 2 branches missed.">        if (btnSubmit != null) btnSubmit.setEnabled(false);</span>
+<span class="fc bfc" id="L246" title="All 4 branches covered.">        if (rgYesNo != null) for (int i = 0; i &lt; rgYesNo.getChildCount(); i++) rgYesNo.getChildAt(i).setEnabled(false);</span>
+<span class="fc bfc" id="L247" title="All 2 branches covered.">        if (ratingBar != null) ratingBar.setIsIndicator(true);</span>
+<span class="fc bfc" id="L248" title="All 4 branches covered.">        if (rgChoices != null) for (int i = 0; i &lt; rgChoices.getChildCount(); i++) rgChoices.getChildAt(i).setEnabled(false);</span>
+<span class="fc bfc" id="L249" title="All 2 branches covered.">        for (RankRow rr : rankRows) rr.picker.setEnabled(false);</span>
+<span class="fc" id="L250">    }</span>
+
+    private void enableVotingUi() {
+<span class="nc bnc" id="L253" title="All 2 branches missed.">        if (btnSubmit != null) btnSubmit.setEnabled(true);</span>
+<span class="nc bnc" id="L254" title="All 4 branches missed.">        if (rgYesNo != null) for (int i = 0; i &lt; rgYesNo.getChildCount(); i++) rgYesNo.getChildAt(i).setEnabled(true);</span>
+<span class="nc bnc" id="L255" title="All 2 branches missed.">        if (ratingBar != null) ratingBar.setIsIndicator(false);</span>
+<span class="nc bnc" id="L256" title="All 4 branches missed.">        if (rgChoices != null) for (int i = 0; i &lt; rgChoices.getChildCount(); i++) rgChoices.getChildAt(i).setEnabled(true);</span>
+<span class="nc bnc" id="L257" title="All 2 branches missed.">        for (RankRow rr : rankRows) rr.picker.setEnabled(true);</span>
+<span class="nc" id="L258">    }</span>
+
+    // ----------------------------
+    // Live Discussion flow
+    // ----------------------------
+
+    private void startDiscussion() {
+<span class="nc" id="L265">        Log.d(&quot;DISCUSSION_FLOW&quot;, &quot;startDiscussion() called, token=&quot; + session.getToken() + &quot; pollId=&quot; + pollId);</span>
+
+<span class="nc" id="L267">        String token = session.getToken();</span>
+<span class="nc" id="L268">        String url = BASE + &quot;/discussions?pollId=&quot; + pollId;</span>
+
+<span class="nc" id="L270">        StringRequest req = new StringRequest(</span>
+                Request.Method.GET,
+                url,
+                resp -&gt; {
+<span class="nc" id="L274">                    Log.d(&quot;DISCUSSION_FLOW&quot;, &quot;GET success: &quot; + resp);</span>
+                    try {
+<span class="nc" id="L276">                        JSONArray arr = new JSONArray(resp);</span>
+<span class="nc bnc" id="L277" title="All 2 branches missed.">                        if (arr.length() == 0) {</span>
+<span class="nc" id="L278">                            Toast.makeText(this, &quot;No discussion exists for this poll.&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L279">                            return;</span>
+                        }
+
+<span class="nc" id="L282">                        JSONObject obj = arr.getJSONObject(0);</span>
+<span class="nc" id="L283">                        int discussionId = obj.getInt(&quot;id&quot;);</span>
+<span class="nc" id="L284">                        String wsEndpoint = &quot;ws://coms-3090-036.class.las.iastate.edu:8080/discussion/&quot;</span>
+                                + discussionId + &quot;?token=&quot; + token;
+
+                        // Reset any active session (if your WebSocketManager supports it)
+<span class="nc" id="L288">                        try { WebSocketManager.getInstance().disconnect(); } catch (Throwable ignore) {}</span>
+
+<span class="nc" id="L290">                        joinDiscussion(discussionId, wsEndpoint);</span>
+
+<span class="nc" id="L292">                    } catch (Exception ex) {</span>
+<span class="nc" id="L293">                        Log.e(&quot;DISCUSSION_FLOW&quot;, &quot;JSON parse error: &quot; + ex);</span>
+<span class="nc" id="L294">                    }</span>
+<span class="nc" id="L295">                },</span>
+                err -&gt; {
+<span class="nc" id="L297">                    Log.e(&quot;DISCUSSION_FLOW&quot;, &quot;GET failed: &quot; + err);</span>
+<span class="nc" id="L298">                    Toast.makeText(this, &quot;Error loading discussion&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L299">                }</span>
+<span class="nc" id="L300">        ) {</span>
+            @Override
+            public Map&lt;String, String&gt; getHeaders() {
+<span class="nc" id="L303">                Map&lt;String, String&gt; h = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L304">                h.put(&quot;Authorization&quot;, token);</span>
+<span class="nc" id="L305">                return h;</span>
+            }
+        };
+
+<span class="nc" id="L309">        AppRequestQueue.get(this).add(req);</span>
+<span class="nc" id="L310">    }</span>
+
+    private void joinDiscussion(int discussionId, String wsEndpoint) {
+<span class="nc" id="L313">        String token = session.getToken();</span>
+<span class="nc" id="L314">        String url = BASE + &quot;/discussions/&quot; + discussionId + &quot;/join&quot;;</span>
+
+<span class="nc" id="L316">        Log.d(&quot;JOIN_DEBUG&quot;, &quot;Joining discussion: &quot; + url + &quot; token=&quot; + token);</span>
+
+<span class="nc" id="L318">        StringRequest req = new StringRequest(</span>
+                Request.Method.POST,
+                url,
+                resp -&gt; {
+<span class="nc" id="L322">                    Log.d(&quot;JOIN_DEBUG&quot;, &quot;Join success: &quot; + resp);</span>
+<span class="nc" id="L323">                    openDiscussionScreen(discussionId, wsEndpoint);</span>
+<span class="nc" id="L324">                },</span>
+                err -&gt; {
+<span class="nc" id="L326">                    String errorBody = &quot;&quot;;</span>
+<span class="nc bnc" id="L327" title="All 6 branches missed.">                    if (err != null &amp;&amp; err.networkResponse != null &amp;&amp; err.networkResponse.data != null) {</span>
+<span class="nc" id="L328">                        errorBody = new String(err.networkResponse.data, StandardCharsets.UTF_8);</span>
+                    }
+
+<span class="nc" id="L331">                    Log.e(&quot;JOIN_DEBUG&quot;, &quot;Join FAILED: &quot; + errorBody);</span>
+<span class="nc bnc" id="L332" title="All 4 branches missed.">                    if (errorBody.contains(&quot;already&quot;) || errorBody.contains(&quot;Already&quot;)) {</span>
+<span class="nc" id="L333">                        openDiscussionScreen(discussionId, wsEndpoint);</span>
+<span class="nc" id="L334">                        return;</span>
+                    }
+
+<span class="nc" id="L337">                    Toast.makeText(this, &quot;JOIN FAILED: &quot; + errorBody, Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L338">                }</span>
+
+<span class="nc" id="L340">        ) {</span>
+            @Override
+            public Map&lt;String, String&gt; getHeaders() {
+<span class="nc" id="L343">                Map&lt;String, String&gt; h = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L344">                h.put(&quot;Authorization&quot;, token);</span>
+<span class="nc" id="L345">                return h;</span>
+            }
+        };
+
+<span class="nc" id="L349">        AppRequestQueue.get(this).add(req);</span>
+<span class="nc" id="L350">    }</span>
+
+    private void openDiscussionScreen(int discussionId, String wsEndpoint) {
+<span class="nc" id="L353">        Intent i = new Intent(this, LiveDiscussionActivity.class);</span>
+<span class="nc" id="L354">        i.putExtra(&quot;discussionId&quot;, discussionId);</span>
+<span class="nc" id="L355">        i.putExtra(&quot;endpoint&quot;, wsEndpoint);</span>
+<span class="nc" id="L356">        i.putExtra(&quot;token&quot;, session.getToken());</span>
+<span class="nc" id="L357">        Log.d(&quot;DISCUSSION_FLOW&quot;, &quot;Opening LiveDiscussionActivity with ws=&quot; + wsEndpoint);</span>
+<span class="nc" id="L358">        startActivity(i);</span>
+<span class="nc" id="L359">    }</span>
+
+    // ----------------------------
+    // Layout &amp; Inputs
+    // ----------------------------
+
+    private boolean tryInflateXml() {
+        try {
+<span class="fc" id="L367">            setContentView(R.layout.activity_vote);</span>
+            // Optional toolbar (won't crash if not present)
+            try {
+<span class="fc" id="L370">                androidx.appcompat.widget.Toolbar tb = findViewById(R.id.toolbarVote);</span>
+<span class="pc bpc" id="L371" title="1 of 2 branches missed.">                if (tb != null) setSupportActionBar(tb);</span>
+<span class="pc" id="L372">            } catch (Exception ignore) {}</span>
+
+<span class="fc" id="L374">            txtTitle   = findViewById(R.id.txtTitle);</span>
+<span class="fc" id="L375">            chipType   = findViewById(R.id.chipType);</span>
+<span class="fc" id="L376">            chipStatus = findViewById(R.id.chipStatus);</span>
+<span class="fc" id="L377">            container  = findViewById(R.id.container);</span>
+<span class="fc" id="L378">            btnSubmit  = findViewById(R.id.btnSubmit);</span>
+<span class="fc" id="L379">            btnResults = findViewById(R.id.btnResults);</span>
+<span class="pc bpc" id="L380" title="3 of 6 branches missed.">            boolean ok = container != null &amp;&amp; btnSubmit != null &amp;&amp; btnResults != null;</span>
+<span class="fc" id="L381">            return ok;</span>
+<span class="nc" id="L382">        } catch (Exception e) {</span>
+<span class="nc" id="L383">            Toast.makeText(this, &quot;Layout error: &quot; + e.getMessage(), Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L384">            return false;</span>
+        }
+    }
+
+    private void buildInputsForType() {
+<span class="pc bpc" id="L389" title="1 of 2 branches missed.">        if (container != null) container.removeAllViews();</span>
+<span class="fc" id="L390">        rankRows.clear();</span>
+
+<span class="pc bpc" id="L392" title="1 of 2 branches missed.">        if (pollType == null) pollType = &quot;&quot;;</span>
+
+<span class="fc bfc" id="L394" title="All 2 branches covered.">        if (&quot;YES_NO&quot;.equalsIgnoreCase(pollType)) {</span>
+<span class="fc" id="L395">            rgYesNo = new RadioGroup(this);</span>
+<span class="fc" id="L396">            rgYesNo.setOrientation(RadioGroup.VERTICAL);</span>
+<span class="fc" id="L397">            RadioButton rbYes = new RadioButton(this);</span>
+<span class="fc" id="L398">            rbYes.setText(&quot;Yes&quot;);</span>
+<span class="fc" id="L399">            rbYes.setId(View.generateViewId());</span>
+<span class="fc" id="L400">            RadioButton rbNo = new RadioButton(this);</span>
+<span class="fc" id="L401">            rbNo.setText(&quot;No&quot;);</span>
+<span class="fc" id="L402">            rbNo.setId(View.generateViewId());</span>
+<span class="fc" id="L403">            rgYesNo.addView(rbYes);</span>
+<span class="fc" id="L404">            rgYesNo.addView(rbNo);</span>
+<span class="fc" id="L405">            container.addView(rgYesNo);</span>
+<span class="fc" id="L406">            return;</span>
+        }
+
+<span class="fc bfc" id="L409" title="All 2 branches covered.">        if (&quot;RATING&quot;.equalsIgnoreCase(pollType)) {</span>
+<span class="fc" id="L410">            ratingBar = new RatingBar(this, null, android.R.attr.ratingBarStyle);</span>
+<span class="fc" id="L411">            ratingBar.setNumStars(5);</span>
+<span class="fc" id="L412">            ratingBar.setStepSize(1f);</span>
+<span class="fc" id="L413">            ratingBar.setIsIndicator(false);</span>
+<span class="fc" id="L414">            ratingBar.setClickable(true);</span>
+<span class="fc" id="L415">            ratingBar.setFocusable(true);</span>
+<span class="fc" id="L416">            ratingBar.setRating(3);</span>
+<span class="fc" id="L417">            container.addView(ratingBar);</span>
+<span class="fc" id="L418">            return;</span>
+        }
+
+<span class="fc bfc" id="L421" title="All 2 branches covered.">        if (&quot;MULTIPLE_CHOICE&quot;.equalsIgnoreCase(pollType)) {</span>
+<span class="fc" id="L422">            rgChoices = new RadioGroup(this);</span>
+<span class="fc" id="L423">            rgChoices.setOrientation(RadioGroup.VERTICAL);</span>
+<span class="pc bpc" id="L424" title="2 of 4 branches missed.">            boolean has = pollOptions != null &amp;&amp; !pollOptions.isEmpty();</span>
+<span class="pc bpc" id="L425" title="1 of 2 branches missed.">            if (has) {</span>
+<span class="fc bfc" id="L426" title="All 2 branches covered.">                for (String opt : pollOptions) {</span>
+<span class="fc" id="L427">                    RadioButton rb = new RadioButton(this);</span>
+<span class="fc" id="L428">                    rb.setId(View.generateViewId());</span>
+<span class="fc" id="L429">                    rb.setText(opt);</span>
+<span class="fc" id="L430">                    rgChoices.addView(rb);</span>
+<span class="fc" id="L431">                }</span>
+<span class="fc" id="L432">                container.addView(rgChoices);</span>
+            } else {
+<span class="nc" id="L434">                TextView tv = new TextView(this);</span>
+<span class="nc" id="L435">                tv.setText(&quot;No options provided.&quot;);</span>
+<span class="nc" id="L436">                container.addView(tv);</span>
+            }
+<span class="fc" id="L438">            return;</span>
+        }
+
+<span class="pc bpc" id="L441" title="1 of 2 branches missed.">        if (&quot;RANKING&quot;.equalsIgnoreCase(pollType)) {</span>
+<span class="pc bpc" id="L442" title="2 of 4 branches missed.">            boolean has = pollOptions != null &amp;&amp; pollOptions.size() &gt; 0;</span>
+<span class="pc bpc" id="L443" title="1 of 2 branches missed.">            if (!has) {</span>
+<span class="nc" id="L444">                TextView tv = new TextView(this);</span>
+<span class="nc" id="L445">                tv.setText(&quot;No options provided for ranking.&quot;);</span>
+<span class="nc" id="L446">                container.addView(tv);</span>
+<span class="nc" id="L447">                return;</span>
+            }
+
+<span class="fc" id="L450">            TextView hint = new TextView(this);</span>
+<span class="fc" id="L451">            hint.setText(&quot;Assign a unique rank to each option:&quot;);</span>
+<span class="fc" id="L452">            hint.setPadding(0, dp(8), 0, dp(8));</span>
+<span class="fc" id="L453">            container.addView(hint);</span>
+
+<span class="fc" id="L455">            int n = pollOptions.size();</span>
+<span class="fc bfc" id="L456" title="All 2 branches covered.">            for (String opt : pollOptions) {</span>
+<span class="fc" id="L457">                LinearLayout row = new LinearLayout(this);</span>
+<span class="fc" id="L458">                row.setOrientation(LinearLayout.HORIZONTAL);</span>
+<span class="fc" id="L459">                row.setPadding(0, dp(4), 0, dp(4));</span>
+
+<span class="fc" id="L461">                TextView label = new TextView(this);</span>
+<span class="fc" id="L462">                label.setText(opt);</span>
+<span class="fc" id="L463">                label.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));</span>
+
+<span class="fc" id="L465">                NumberPicker picker = new NumberPicker(this);</span>
+<span class="fc" id="L466">                picker.setMinValue(1);</span>
+<span class="fc" id="L467">                picker.setMaxValue(n);</span>
+<span class="fc" id="L468">                picker.setWrapSelectorWheel(true);</span>
+<span class="fc" id="L469">                picker.setValue(1);</span>
+
+<span class="fc" id="L471">                row.addView(label);</span>
+<span class="fc" id="L472">                row.addView(picker);</span>
+<span class="fc" id="L473">                container.addView(row);</span>
+
+<span class="fc" id="L475">                RankRow rr = new RankRow();</span>
+<span class="fc" id="L476">                rr.option = opt;</span>
+<span class="fc" id="L477">                rr.picker = picker;</span>
+<span class="fc" id="L478">                rankRows.add(rr);</span>
+<span class="fc" id="L479">            }</span>
+<span class="fc" id="L480">            return;</span>
+        }
+
+<span class="nc" id="L483">        TextView tv = new TextView(this);</span>
+<span class="nc bnc" id="L484" title="All 2 branches missed.">        tv.setText(&quot;Unsupported poll type: &quot; + (pollType != null ? pollType : &quot;&quot;));</span>
+<span class="nc" id="L485">        container.addView(tv);</span>
+<span class="nc" id="L486">    }</span>
+
+    // ----------------------------
+    // Submit vote
+    // ----------------------------
+
+    private void doSubmit() {
+<span class="nc bnc" id="L493" title="All 2 branches missed.">        if (pollId &lt;= 0) {</span>
+<span class="nc" id="L494">            Toast.makeText(this, &quot;Invalid poll id&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L495">            return;</span>
+        }
+
+<span class="nc" id="L498">        String userId = session.getUserId();</span>
+<span class="nc bnc" id="L499" title="All 4 branches missed.">        if (userId == null || userId.trim().isEmpty()) {</span>
+<span class="nc" id="L500">            String email = session.getEmail();</span>
+<span class="nc bnc" id="L501" title="All 4 branches missed.">            userId = (email != null &amp;&amp; !email.trim().isEmpty()) ? email : &quot;anonymous@example.com&quot;;</span>
+        }
+
+<span class="nc bnc" id="L504" title="All 2 branches missed.">        if (&quot;YES_NO&quot;.equalsIgnoreCase(pollType)) {</span>
+<span class="nc bnc" id="L505" title="All 2 branches missed.">            int checked = (rgYesNo != null) ? rgYesNo.getCheckedRadioButtonId() : -1;</span>
+<span class="nc bnc" id="L506" title="All 2 branches missed.">            if (checked == -1) {</span>
+<span class="nc" id="L507">                Toast.makeText(this, &quot;Please select Yes or No&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L508">                return;</span>
+            }
+<span class="nc" id="L510">            RadioButton rb = findViewById(checked);</span>
+<span class="nc bnc" id="L511" title="All 4 branches missed.">            boolean isYes = rb != null &amp;&amp; &quot;yes&quot;.equalsIgnoreCase(rb.getText().toString());</span>
+
+<span class="nc" id="L513">            JSONObject body = new JSONObject();</span>
+            try {
+<span class="nc bnc" id="L515" title="All 2 branches missed.">                if (!Double.isNaN(latExtra)) body.put(&quot;lat&quot;, latExtra);</span>
+<span class="nc bnc" id="L516" title="All 2 branches missed.">                if (!Double.isNaN(lngExtra)) body.put(&quot;lng&quot;, lngExtra);</span>
+<span class="nc" id="L517">            } catch (Exception ignore) {}</span>
+
+<span class="nc bnc" id="L519" title="All 2 branches missed.">            String url = BASE + &quot;/polls/&quot; + pollId + &quot;/vote?userId=&quot; + encode(userId) + &quot;&amp;numericValue=&quot; + (isYes ? 1 : 0);</span>
+<span class="nc" id="L520">            postJson(url, body.toString(), &quot;Vote submitted&quot;);</span>
+<span class="nc" id="L521">            return;</span>
+        }
+
+<span class="nc bnc" id="L524" title="All 2 branches missed.">        if (&quot;RATING&quot;.equalsIgnoreCase(pollType)) {</span>
+<span class="nc bnc" id="L525" title="All 2 branches missed.">            if (ratingBar == null) {</span>
+<span class="nc" id="L526">                Toast.makeText(this, &quot;Rating not ready&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L527">                return;</span>
+            }
+<span class="nc" id="L529">            int numericValue = Math.round(ratingBar.getRating());</span>
+<span class="nc bnc" id="L530" title="All 2 branches missed.">            if (numericValue &lt; 1) numericValue = 1;</span>
+
+<span class="nc" id="L532">            JSONObject body = new JSONObject();</span>
+            try {
+<span class="nc bnc" id="L534" title="All 2 branches missed.">                if (!Double.isNaN(latExtra)) body.put(&quot;lat&quot;, latExtra);</span>
+<span class="nc bnc" id="L535" title="All 2 branches missed.">                if (!Double.isNaN(lngExtra)) body.put(&quot;lng&quot;, lngExtra);</span>
+<span class="nc" id="L536">            } catch (Exception ignore) {}</span>
+
+<span class="nc" id="L538">            String url = BASE + &quot;/polls/&quot; + pollId + &quot;/vote?userId=&quot; + encode(userId) + &quot;&amp;numericValue=&quot; + numericValue;</span>
+<span class="nc" id="L539">            postJson(url, body.toString(), &quot;Vote submitted&quot;);</span>
+<span class="nc" id="L540">            return;</span>
+        }
+
+<span class="nc bnc" id="L543" title="All 2 branches missed.">        if (&quot;MULTIPLE_CHOICE&quot;.equalsIgnoreCase(pollType)) {</span>
+<span class="nc bnc" id="L544" title="All 2 branches missed.">            if (rgChoices == null) {</span>
+<span class="nc" id="L545">                Toast.makeText(this, &quot;Choices not ready&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L546">                return;</span>
+            }
+<span class="nc" id="L548">            int checked = rgChoices.getCheckedRadioButtonId();</span>
+<span class="nc bnc" id="L549" title="All 2 branches missed.">            if (checked == -1) {</span>
+<span class="nc" id="L550">                Toast.makeText(this, &quot;Please select an option&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L551">                return;</span>
+            }
+<span class="nc" id="L553">            RadioButton rb = findViewById(checked);</span>
+<span class="nc bnc" id="L554" title="All 2 branches missed.">            String choice = (rb != null) ? rb.getText().toString() : &quot;&quot;;</span>
+<span class="nc bnc" id="L555" title="All 4 branches missed.">            if (choice == null || choice.trim().isEmpty()) {</span>
+<span class="nc" id="L556">                Toast.makeText(this, &quot;Invalid choice&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L557">                return;</span>
+            }
+
+<span class="nc" id="L560">            JSONObject body = new JSONObject();</span>
+            try {
+<span class="nc bnc" id="L562" title="All 2 branches missed.">                if (!Double.isNaN(latExtra)) body.put(&quot;lat&quot;, latExtra);</span>
+<span class="nc bnc" id="L563" title="All 2 branches missed.">                if (!Double.isNaN(lngExtra)) body.put(&quot;lng&quot;, lngExtra);</span>
+<span class="nc" id="L564">            } catch (Exception ignore) {}</span>
+
+<span class="nc" id="L566">            String url = BASE + &quot;/polls/&quot; + pollId + &quot;/vote?userId=&quot; + encode(userId) + &quot;&amp;choice=&quot; + encode(choice);</span>
+<span class="nc" id="L567">            postJson(url, body.toString(), &quot;Vote submitted Successfully&quot;);</span>
+<span class="nc" id="L568">            return;</span>
+        }
+
+<span class="nc bnc" id="L571" title="All 2 branches missed.">        if (&quot;RANKING&quot;.equalsIgnoreCase(pollType)) {</span>
+<span class="nc bnc" id="L572" title="All 2 branches missed.">            if (rankRows.isEmpty()) {</span>
+<span class="nc" id="L573">                Toast.makeText(this, &quot;No ranking options to submit&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L574">                return;</span>
+            }
+
+<span class="nc" id="L577">            int n = rankRows.size();</span>
+<span class="nc" id="L578">            boolean[] used = new boolean[n + 1];</span>
+<span class="nc" id="L579">            JSONArray arr = new JSONArray();</span>
+
+<span class="nc bnc" id="L581" title="All 2 branches missed.">            for (int i = 0; i &lt; n; i++) {</span>
+<span class="nc" id="L582">                RankRow rr = rankRows.get(i);</span>
+<span class="nc" id="L583">                int r = rr.picker.getValue();</span>
+<span class="nc bnc" id="L584" title="All 4 branches missed.">                if (r &lt; 1 || r &gt; n) {</span>
+<span class="nc" id="L585">                    Toast.makeText(this, &quot;Ranks must be between 1 and &quot; + n, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L586">                    return;</span>
+                }
+<span class="nc bnc" id="L588" title="All 2 branches missed.">                if (used[r]) {</span>
+<span class="nc" id="L589">                    Toast.makeText(this, &quot;Each rank 1..&quot; + n + &quot; must be used exactly once.&quot;, Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L590">                    return;</span>
+                }
+<span class="nc" id="L592">                used[r] = true;</span>
+
+<span class="nc" id="L594">                JSONObject item = new JSONObject();</span>
+                try {
+<span class="nc" id="L596">                    item.put(&quot;choice&quot;, rr.option);</span>
+<span class="nc" id="L597">                    item.put(&quot;rank&quot;, r);</span>
+<span class="nc bnc" id="L598" title="All 2 branches missed.">                    if (i == 0) {</span>
+<span class="nc bnc" id="L599" title="All 2 branches missed.">                        if (!Double.isNaN(latExtra)) item.put(&quot;lat&quot;, latExtra);</span>
+<span class="nc bnc" id="L600" title="All 2 branches missed.">                        if (!Double.isNaN(lngExtra)) item.put(&quot;lng&quot;, lngExtra);</span>
+                    }
+<span class="nc" id="L602">                } catch (Exception ignore) {}</span>
+<span class="nc" id="L603">                arr.put(item);</span>
+            }
+
+<span class="nc bnc" id="L606" title="All 2 branches missed.">            for (int r = 1; r &lt;= n; r++) {</span>
+<span class="nc bnc" id="L607" title="All 2 branches missed.">                if (!used[r]) {</span>
+<span class="nc" id="L608">                    Toast.makeText(this, &quot;Please assign all ranks 1..&quot; + n, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L609">                    return;</span>
+                }
+            }
+
+<span class="nc" id="L613">            String url = BASE + &quot;/polls/&quot; + pollId + &quot;/vote/ranking?userId=&quot; + encode(userId);</span>
+<span class="nc" id="L614">            postJsonArray(url, arr.toString(), &quot;Ranking submitted&quot;);</span>
+<span class="nc" id="L615">            return;</span>
+        }
+
+<span class="nc" id="L618">        Toast.makeText(this, &quot;Unsupported poll type: &quot; + pollType, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L619">    }</span>
+
+    // ----------------------------
+    // Networking helpers
+    // ----------------------------
+
+    private void postJson(String url, String body, String successMsg) {
+<span class="nc" id="L626">        StringRequest req = new StringRequest(</span>
+                Request.Method.POST,
+                url,
+<span class="nc" id="L629">                resp -&gt; Toast.makeText(this, successMsg, Toast.LENGTH_SHORT).show(),</span>
+                err -&gt; {
+<span class="nc" id="L631">                    int code = -1;</span>
+<span class="nc bnc" id="L632" title="All 4 branches missed.">                    if (err != null &amp;&amp; err.networkResponse != null) code = err.networkResponse.statusCode;</span>
+<span class="nc" id="L633">                    String msg = parseVolleyError(err);</span>
+<span class="nc" id="L634">                    Toast.makeText(this, &quot;Vote failed (&quot; + code + &quot;): &quot; + msg, Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L635">                }</span>
+<span class="nc" id="L636">        ) {</span>
+<span class="nc" id="L637">            @Override public byte[] getBody() { return body.getBytes(StandardCharsets.UTF_8); }</span>
+<span class="nc" id="L638">            @Override public String getBodyContentType() { return &quot;application/json; charset=UTF-8&quot;; }</span>
+            @Override public Map&lt;String, String&gt; getHeaders() {
+<span class="nc" id="L640">                Map&lt;String, String&gt; h = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L641">                h.put(&quot;Accept&quot;, &quot;application/json&quot;);</span>
+<span class="nc" id="L642">                return h;</span>
+            }
+        };
+<span class="nc" id="L645">        req.setRetryPolicy(new DefaultRetryPolicy(15000, 0, 1.0f));</span>
+<span class="nc" id="L646">        AppRequestQueue.get(this).add(req);</span>
+<span class="nc" id="L647">    }</span>
+
+    private void postJsonArray(String url, String bodyJsonArray, String successMsg) {
+<span class="nc" id="L650">        StringRequest req = new StringRequest(</span>
+                Request.Method.POST,
+                url,
+<span class="nc" id="L653">                resp -&gt; Toast.makeText(this, successMsg, Toast.LENGTH_SHORT).show(),</span>
+                err -&gt; {
+<span class="nc" id="L655">                    int code = -1;</span>
+<span class="nc bnc" id="L656" title="All 4 branches missed.">                    if (err != null &amp;&amp; err.networkResponse != null) code = err.networkResponse.statusCode;</span>
+<span class="nc" id="L657">                    String msg = parseVolleyError(err);</span>
+<span class="nc" id="L658">                    Toast.makeText(this, &quot;Ranking failed (&quot; + code + &quot;): &quot; + msg, Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L659">                }</span>
+<span class="nc" id="L660">        ) {</span>
+<span class="nc" id="L661">            @Override public byte[] getBody() { return bodyJsonArray.getBytes(StandardCharsets.UTF_8); }</span>
+<span class="nc" id="L662">            @Override public String getBodyContentType() { return &quot;application/json; charset=UTF-8&quot;; }</span>
+            @Override public Map&lt;String, String&gt; getHeaders() {
+<span class="nc" id="L664">                Map&lt;String, String&gt; h = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L665">                h.put(&quot;Accept&quot;, &quot;application/json&quot;);</span>
+<span class="nc" id="L666">                return h;</span>
+            }
+        };
+<span class="nc" id="L669">        req.setRetryPolicy(new DefaultRetryPolicy(15000, 0, 1.0f));</span>
+<span class="nc" id="L670">        AppRequestQueue.get(this).add(req);</span>
+<span class="nc" id="L671">    }</span>
+
+    private String parseVolleyError(com.android.volley.VolleyError err) {
+<span class="nc bnc" id="L674" title="All 2 branches missed.">        if (err == null) return &quot;Unknown error&quot;;</span>
+<span class="nc bnc" id="L675" title="All 2 branches missed.">        if (err instanceof com.android.volley.TimeoutError) return &quot;network timeout&quot;;</span>
+<span class="nc bnc" id="L676" title="All 2 branches missed.">        if (err instanceof com.android.volley.NoConnectionError) return &quot;no connection&quot;;</span>
+<span class="nc" id="L677">        String body = &quot;&quot;;</span>
+        try {
+<span class="nc bnc" id="L679" title="All 4 branches missed.">            if (err.networkResponse != null &amp;&amp; err.networkResponse.data != null) {</span>
+<span class="nc" id="L680">                body = new String(err.networkResponse.data, StandardCharsets.UTF_8);</span>
+<span class="nc" id="L681">                JSONObject o = new JSONObject(body);</span>
+<span class="nc" id="L682">                String m = o.optString(&quot;message&quot;, &quot;&quot;);</span>
+<span class="nc bnc" id="L683" title="All 4 branches missed.">                if (m != null &amp;&amp; !m.isEmpty()) return m;</span>
+<span class="nc" id="L684">                String e2 = o.optString(&quot;error&quot;, &quot;&quot;);</span>
+<span class="nc bnc" id="L685" title="All 4 branches missed.">                if (e2 != null &amp;&amp; !e2.isEmpty()) return e2;</span>
+            }
+<span class="nc" id="L687">        } catch (Exception ignore) {}</span>
+<span class="nc bnc" id="L688" title="All 2 branches missed.">        return body.isEmpty() ? err.getClass().getSimpleName() : body;</span>
+    }
+
+    // ----------------------------
+    // Results &amp; fallback UI
+    // ----------------------------
+
+    private void openResults() {
+<span class="nc" id="L696">        Intent i = new Intent(this, ResultsActivity.class);</span>
+<span class="nc" id="L697">        i.putExtra(&quot;pollId&quot;, pollId);</span>
+<span class="nc" id="L698">        i.putExtra(&quot;title&quot;, pollTitle);</span>
+<span class="nc" id="L699">        i.putExtra(&quot;type&quot;, pollType);</span>
+<span class="nc bnc" id="L700" title="All 2 branches missed.">        if (pollOptions != null) i.putStringArrayListExtra(&quot;options&quot;, pollOptions);</span>
+<span class="nc" id="L701">        startActivity(i);</span>
+<span class="nc" id="L702">    }</span>
+
+    private void buildFallbackUi() {
+<span class="nc" id="L705">        LinearLayout root = new LinearLayout(this);</span>
+<span class="nc" id="L706">        root.setOrientation(LinearLayout.VERTICAL);</span>
+<span class="nc" id="L707">        root.setPadding(dp(16), dp(16), dp(16), dp(16));</span>
+
+<span class="nc" id="L709">        TextView h = new TextView(this);</span>
+<span class="nc bnc" id="L710" title="All 2 branches missed.">        h.setText(pollTitle != null ? pollTitle : &quot;Vote&quot;);</span>
+<span class="nc" id="L711">        h.setTextSize(20);</span>
+<span class="nc" id="L712">        h.setGravity(Gravity.START);</span>
+
+<span class="nc" id="L714">        TextView t = new TextView(this);</span>
+<span class="nc bnc" id="L715" title="All 2 branches missed.">        t.setText(&quot;Type: &quot; + (pollType != null ? pollType : &quot;&quot;));</span>
+
+<span class="nc" id="L717">        container = new LinearLayout(this);</span>
+<span class="nc" id="L718">        container.setOrientation(LinearLayout.VERTICAL);</span>
+<span class="nc" id="L719">        container.setPadding(0, dp(12), 0, dp(12));</span>
+
+<span class="nc" id="L721">        btnSubmit = new Button(this);</span>
+<span class="nc" id="L722">        btnSubmit.setText(&quot;Submit&quot;);</span>
+
+<span class="nc" id="L724">        btnResults = new Button(this);</span>
+<span class="nc" id="L725">        btnResults.setText(&quot;See Results&quot;);</span>
+
+        // Optional: Live Discussion FAB won't exist in this fallback; that's fine.
+
+<span class="nc" id="L729">        setContentView(new LinearLayout(this) {{</span>
+<span class="nc" id="L730">            setOrientation(VERTICAL);</span>
+<span class="nc" id="L731">            addView(h);</span>
+<span class="nc" id="L732">            addView(t);</span>
+<span class="nc" id="L733">            addView(container);</span>
+<span class="nc" id="L734">            addView(btnSubmit);</span>
+<span class="nc" id="L735">            addView(btnResults);</span>
+<span class="nc" id="L736">        }});</span>
+
+<span class="nc" id="L738">        buildInputsForType();</span>
+<span class="nc" id="L739">        btnSubmit.setOnClickListener(v -&gt; doSubmit());</span>
+<span class="nc" id="L740">        btnResults.setOnClickListener(v -&gt; openResults());</span>
+<span class="nc" id="L741">    }</span>
+
+    // ----------------------------
+    // Rotate Access Code (owner)
+    // ----------------------------
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+<span class="fc" id="L749">        menu.add(0, MENU_ROTATE_CODE, 0, &quot;Rotate Access Code&quot;);</span>
+<span class="fc" id="L750">        return true;</span>
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+<span class="nc bnc" id="L755" title="All 2 branches missed.">        if (item.getItemId() == MENU_ROTATE_CODE) {</span>
+<span class="nc" id="L756">            onRotateCodeClicked();</span>
+<span class="nc" id="L757">            return true;</span>
+        }
+<span class="nc" id="L759">        return super.onOptionsItemSelected(item);</span>
+    }
+
+    private void onRotateCodeClicked() {
+<span class="nc bnc" id="L763" title="All 2 branches missed.">        if (pollId &lt;= 0) {</span>
+<span class="nc" id="L764">            Toast.makeText(this, &quot;Poll not ready&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L765">            return;</span>
+        }
+<span class="nc" id="L767">        rotateAccessCode(pollId);</span>
+<span class="nc" id="L768">    }</span>
+
+    private void rotateAccessCode(int id) {
+<span class="nc" id="L771">        final String url = BASE + &quot;/polls/&quot; + id + &quot;/rotate-code&quot;;</span>
+
+<span class="nc" id="L773">        JSONObject body = new JSONObject();</span>
+        try {
+<span class="nc" id="L775">            String emailId = new SessionManager(this).getEmail();</span>
+<span class="nc bnc" id="L776" title="All 4 branches missed.">            if (emailId != null &amp;&amp; !emailId.trim().isEmpty()) {</span>
+<span class="nc" id="L777">                body.put(&quot;emailId&quot;, emailId);</span>
+            }
+<span class="nc" id="L779">        } catch (Exception ignore) {}</span>
+
+<span class="nc" id="L781">        JsonObjectRequest req = new JsonObjectRequest(</span>
+                Request.Method.POST,
+                url,
+                body,
+                resp -&gt; {
+                    // Try to read the code from the rotate response (if present)
+<span class="nc" id="L787">                    String newCode = null;</span>
+<span class="nc bnc" id="L788" title="All 2 branches missed.">                    if (resp != null) {</span>
+<span class="nc" id="L789">                        newCode = resp.optString(&quot;accessCode&quot;, null);</span>
+<span class="nc bnc" id="L790" title="All 4 branches missed.">                        if (newCode == null &amp;&amp; resp.has(&quot;poll&quot;)) {</span>
+<span class="nc" id="L791">                            JSONObject pollObj = resp.optJSONObject(&quot;poll&quot;);</span>
+<span class="nc bnc" id="L792" title="All 2 branches missed.">                            if (pollObj != null) newCode = pollObj.optString(&quot;accessCode&quot;, null);</span>
+                        }
+                    }
+
+<span class="nc bnc" id="L796" title="All 4 branches missed.">                    if (newCode != null &amp;&amp; !newCode.isEmpty()) {</span>
+<span class="nc" id="L797">                        showNewCodeDialog(newCode);</span>
+                    } else {
+                        // No code returned — fetch it explicitly
+<span class="nc" id="L800">                        fetchAccessCode(id);</span>
+                    }
+<span class="nc" id="L802">                },</span>
+                err -&gt; {
+<span class="nc" id="L804">                    int code = -1;</span>
+<span class="nc" id="L805">                    String msg = &quot;&quot;;</span>
+<span class="nc bnc" id="L806" title="All 4 branches missed.">                    if (err != null &amp;&amp; err.networkResponse != null) {</span>
+<span class="nc" id="L807">                        code = err.networkResponse.statusCode;</span>
+<span class="nc bnc" id="L808" title="All 2 branches missed.">                        if (err.networkResponse.data != null) {</span>
+<span class="nc" id="L809">                            msg = new String(err.networkResponse.data);</span>
+                        }
+                    }
+<span class="nc bnc" id="L812" title="All 2 branches missed.">                    if (code == 403) {</span>
+<span class="nc" id="L813">                        Toast.makeText(this, &quot;Only the poll owner can rotate the code.&quot;, Toast.LENGTH_LONG).show();</span>
+                    } else {
+<span class="nc" id="L815">                        Toast.makeText(this, &quot;Rotate failed (&quot; + code + &quot;): &quot; + msg, Toast.LENGTH_LONG).show();</span>
+                    }
+<span class="nc" id="L817">                }</span>
+<span class="nc" id="L818">        ) {</span>
+            @Override
+            public Map&lt;String, String&gt; getHeaders() {
+<span class="nc" id="L821">                Map&lt;String, String&gt; h = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L822">                h.put(&quot;Accept&quot;, &quot;application/json&quot;);</span>
+<span class="nc" id="L823">                h.put(&quot;Content-Type&quot;, &quot;application/json&quot;);</span>
+<span class="nc" id="L824">                return h;</span>
+            }
+        };
+
+<span class="nc" id="L828">        AppRequestQueue.get(this).add(req);</span>
+<span class="nc" id="L829">    }</span>
+
+    private void fetchAccessCode(int pollId) {
+<span class="nc" id="L832">        String emailId = new SessionManager(this).getEmail();</span>
+<span class="nc bnc" id="L833" title="All 4 branches missed.">        if (emailId == null || emailId.trim().isEmpty()) {</span>
+<span class="nc" id="L834">            Toast.makeText(this, &quot;Cannot fetch code: no email in session&quot;, Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L835">            return;</span>
+        }
+
+<span class="nc" id="L838">        final String url = BASE + &quot;/polls/&quot; + pollId + &quot;/access-code?emailId=&quot; + encode(emailId);</span>
+
+<span class="nc" id="L840">        StringRequest req = new StringRequest(</span>
+                Request.Method.GET,
+                url,
+                resp -&gt; {
+                    try {
+<span class="nc" id="L845">                        JSONObject o = new JSONObject(resp);</span>
+<span class="nc" id="L846">                        String code = o.optString(&quot;accessCode&quot;, null);</span>
+<span class="nc bnc" id="L847" title="All 4 branches missed.">                        if (code != null &amp;&amp; !code.isEmpty()) {</span>
+<span class="nc" id="L848">                            showNewCodeDialog(code);</span>
+                        } else {
+<span class="nc" id="L850">                            Toast.makeText(this, &quot;Rotated, but backend returned no code.&quot;, Toast.LENGTH_LONG).show();</span>
+                        }
+<span class="nc" id="L852">                    } catch (Exception e) {</span>
+<span class="nc" id="L853">                        Toast.makeText(this, &quot;Failed to parse access code response&quot;, Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L854">                    }</span>
+<span class="nc" id="L855">                },</span>
+                err -&gt; {
+<span class="nc" id="L857">                    int code = -1;</span>
+<span class="nc" id="L858">                    String msg = &quot;&quot;;</span>
+<span class="nc bnc" id="L859" title="All 4 branches missed.">                    if (err != null &amp;&amp; err.networkResponse != null) {</span>
+<span class="nc" id="L860">                        code = err.networkResponse.statusCode;</span>
+<span class="nc bnc" id="L861" title="All 2 branches missed.">                        if (err.networkResponse.data != null) {</span>
+<span class="nc" id="L862">                            msg = new String(err.networkResponse.data);</span>
+                        }
+                    }
+<span class="nc bnc" id="L865" title="All 2 branches missed.">                    if (code == 403) {</span>
+<span class="nc" id="L866">                        Toast.makeText(this, &quot;Only the owner can retrieve the access code.&quot;, Toast.LENGTH_LONG).show();</span>
+                    } else {
+<span class="nc" id="L868">                        Toast.makeText(this, &quot;Fetch code failed (&quot; + code + &quot;): &quot; + msg, Toast.LENGTH_LONG).show();</span>
+                    }
+<span class="nc" id="L870">                }</span>
+<span class="nc" id="L871">        ) {</span>
+            @Override
+            public Map&lt;String, String&gt; getHeaders() {
+<span class="nc" id="L874">                Map&lt;String, String&gt; h = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L875">                h.put(&quot;Accept&quot;, &quot;application/json&quot;);</span>
+<span class="nc" id="L876">                return h;</span>
+            }
+        };
+
+<span class="nc" id="L880">        AppRequestQueue.get(this).add(req);</span>
+<span class="nc" id="L881">    }</span>
+
+    private void showNewCodeDialog(String accessCode) {
+<span class="nc" id="L884">        final String codeToCopy = accessCode;</span>
+<span class="nc" id="L885">        new AlertDialog.Builder(this)</span>
+<span class="nc" id="L886">                .setTitle(&quot;Access Code Rotated&quot;)</span>
+<span class="nc" id="L887">                .setMessage(&quot;New access code:\n\n&quot; + accessCode)</span>
+<span class="nc" id="L888">                .setPositiveButton(&quot;Copy&quot;, (d, w) -&gt; {</span>
+<span class="nc" id="L889">                    ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);</span>
+<span class="nc bnc" id="L890" title="All 2 branches missed.">                    if (cm != null) {</span>
+<span class="nc" id="L891">                        cm.setPrimaryClip(ClipData.newPlainText(&quot;Access Code&quot;, codeToCopy));</span>
+<span class="nc" id="L892">                        Toast.makeText(this, &quot;Access code copied&quot;, Toast.LENGTH_SHORT).show();</span>
+                    }
+<span class="nc" id="L894">                })</span>
+<span class="nc" id="L895">                .setNegativeButton(&quot;Close&quot;, null)</span>
+<span class="nc" id="L896">                .show();</span>
+<span class="nc" id="L897">    }</span>
+
+    // ----------------------------
+    // Misc helpers
+    // ----------------------------
+
+    private String encode(String s) {
+        try {
+<span class="nc" id="L905">            return java.net.URLEncoder.encode(s, &quot;UTF-8&quot;);</span>
+<span class="nc" id="L906">        } catch (Exception e) {</span>
+<span class="nc" id="L907">            return s;</span>
+        }
+    }
+
+    private int dp(int v) {
+<span class="fc" id="L912">        float d = getResources().getDisplayMetrics().density;</span>
+<span class="fc" id="L913">        return Math.round(v * d);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span>Generated by the Android Gradle plugin 8.13.1</div></body></html>

@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MapActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debug</a> &gt; <a href="index.source.html" class="el_package">com.example.frontendproject</a> &gt; <span class="el_source">MapActivity.java</span></div><h1>MapActivity.java</h1><pre class="source lang-java linenums">package com.example.frontendproject;
+
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.os.Bundle;
+import android.util.Log;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.Request;
+import com.android.volley.toolbox.StringRequest;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.Circle;
+import com.google.android.gms.maps.model.CircleOptions;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
+
+import org.json.JSONObject;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
+
+
+/**
+ * MapActivity displays the campus geofence on Google Maps, retrieves the user's current
+ * location, and determines voting eligibility based on distance from ISU campus.
+ *
+ * The activity:
+ * 1) Requests location permissions.
+ * 2) Gets last known location or requests fresh GPS updates.
+ * 3) Shows the user marker and a small personal radius circle on the map.
+ * 4) Performs a backend eligibility check using a POST request.
+ * 5) Enables the Continue button only if the user is eligible.
+ */
+
+<span class="fc" id="L54">public class MapActivity extends AppCompatActivity implements OnMapReadyCallback {</span>
+
+    private static final String TAG = &quot;MapActivity&quot;;
+    private static final int REQ_LOCATION = 42;
+
+    // === Geofence (keep in sync with backend) ===
+<span class="fc" id="L60">    private static final LatLng ISU_CENTER = new LatLng(42.0266, -93.6465);</span>
+    private static final float ISU_RADIUS_METERS = 2500f;      // Wallace/Wilson + UV + SUV covered
+    private static final float USER_VISUAL_RADIUS_METERS = 60f; // small personal circle
+    private static final float DEFAULT_ZOOM = 15f;
+
+    // === Backend ===
+    // If you test on Android emulator against a server running on your laptop, use 10.0.2.2
+    // Example: &quot;http://10.0.2.2:8080&quot;
+    // If the server is remote (Leyla's), keep the remote URL.
+    private static final String BASE_URL = &quot;http://coms-3090-036.class.las.iastate.edu:8080&quot;;
+    //private static final String BASE_URL = &quot;http://10.0.2.2:8080&quot;;
+
+    private static final String ELIGIBILITY_PATH = &quot;/location/eligibility&quot;;
+
+    // === UI ===
+    private GoogleMap gmap;
+    private FusedLocationProviderClient fused;
+    private TextView tvStatus;
+    private Button btnContinue;
+
+    // === Location ===
+    private LocationCallback locationCallback;
+<span class="fc" id="L82">    private boolean requestingUpdates = false;</span>
+
+    // === Markers/Circles (debounced) ===
+    private Marker userMarker;
+    private Circle userCircle;
+    private Circle campusCircle;
+
+    // === State ===
+<span class="fc" id="L90">    private double lastLat = Double.NaN;</span>
+<span class="fc" id="L91">    private double lastLng = Double.NaN;</span>
+<span class="fc" id="L92">    private boolean insideGeo = false;</span>
+<span class="fc" id="L93">    private boolean serverEligible = false;</span>
+<span class="fc" id="L94">    private boolean serverCheckedAtLeastOnce = false;</span>
+
+    private SessionManager session; // kept in case you read token elsewhere (not used here)
+    /**
+     * Initializes the map screen, binds UI components, sets up the map fragment,
+     * and prepares the LocationCallback to receive GPS updates.
+     *
+     * @param savedInstanceState previous saved state, if any
+     */
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L105">        super.onCreate(savedInstanceState);</span>
+<span class="fc" id="L106">        setContentView(R.layout.activity_map);</span>
+
+<span class="fc" id="L108">        tvStatus = findViewById(R.id.tvStatus);</span>
+<span class="fc" id="L109">        btnContinue = findViewById(R.id.btnContinue);</span>
+<span class="fc" id="L110">        btnContinue.setEnabled(false);</span>
+<span class="pc" id="L111">        btnContinue.setOnClickListener(v -&gt; openPolls());</span>
+
+<span class="fc" id="L113">        fused = LocationServices.getFusedLocationProviderClient(this);</span>
+<span class="fc" id="L114">        session = new SessionManager(this);</span>
+
+<span class="fc" id="L116">        SupportMapFragment mapFragment =</span>
+<span class="fc" id="L117">                (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map_fragment);</span>
+<span class="pc bpc" id="L118" title="1 of 2 branches missed.">        if (mapFragment == null) {</span>
+<span class="nc" id="L119">            Toast.makeText(this, &quot;Map fragment not found&quot;, Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L120">            tvStatus.setText(&quot;Map fragment not found in layout.&quot;);</span>
+<span class="nc" id="L121">            return;</span>
+        }
+<span class="fc" id="L123">        mapFragment.getMapAsync(this);</span>
+
+<span class="fc" id="L125">        locationCallback = new LocationCallback() {</span>
+            @Override
+            public void onLocationResult(@NonNull LocationResult result) {
+<span class="fc" id="L128">                Location loc = result.getLastLocation();</span>
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">                if (loc != null) {</span>
+<span class="fc" id="L130">                    handleLocation(loc);</span>
+                    // If only one fresh fix is needed for this screen, stop updates
+<span class="fc" id="L132">                    stopLocationUpdates();</span>
+                }
+<span class="fc" id="L134">            }</span>
+        };
+<span class="fc" id="L136">    }</span>
+    /**
+     * Called when the Google Map is ready. Configures UI settings,
+     * draws the campus geofence circle, and starts permission/location flow.
+     *
+     * @param googleMap the GoogleMap instance to display and manipulate
+     */
+    @Override
+    public void onMapReady(@NonNull GoogleMap googleMap) {
+<span class="fc" id="L145">        gmap = googleMap;</span>
+
+<span class="fc" id="L147">        gmap.getUiSettings().setZoomControlsEnabled(true);</span>
+<span class="fc" id="L148">        gmap.getUiSettings().setMyLocationButtonEnabled(true);</span>
+
+        // Draw campus geofence
+<span class="pc bpc" id="L151" title="1 of 2 branches missed.">        if (campusCircle == null) {</span>
+<span class="fc" id="L152">            campusCircle = gmap.addCircle(new CircleOptions()</span>
+<span class="fc" id="L153">                    .center(ISU_CENTER)</span>
+<span class="fc" id="L154">                    .radius(ISU_RADIUS_METERS)</span>
+<span class="fc" id="L155">                    .strokeWidth(4f)</span>
+<span class="fc" id="L156">                    .strokeColor(0xAA1E88E5)   // semi-opaque blue stroke</span>
+<span class="fc" id="L157">                    .fillColor(0x331E88E5));   // translucent fill</span>
+<span class="fc" id="L158">            gmap.addMarker(new MarkerOptions().position(ISU_CENTER).title(&quot;Campus Center&quot;));</span>
+<span class="fc" id="L159">            gmap.getUiSettings().setAllGesturesEnabled(true);</span>
+
+        }
+
+<span class="fc" id="L163">        gmap.moveCamera(CameraUpdateFactory.newLatLngZoom(ISU_CENTER, DEFAULT_ZOOM));</span>
+<span class="fc" id="L164">        tvStatus.setText(&quot;Map ready. Checking location permission…&quot;);</span>
+
+<span class="fc" id="L166">        enableMyLocationIfPermitted();</span>
+<span class="fc" id="L167">    }</span>
+    /**
+     * Checks if the app has location permission.
+     * If granted, enables MyLocation layer and fetches location.
+     * If not granted, requests permission from the user.
+     */
+    private void enableMyLocationIfPermitted() {
+<span class="fc bfc" id="L174" title="All 2 branches covered.">        boolean fine = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)</span>
+                == PackageManager.PERMISSION_GRANTED;
+<span class="fc bfc" id="L176" title="All 2 branches covered.">        boolean coarse = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)</span>
+                == PackageManager.PERMISSION_GRANTED;
+
+<span class="pc bpc" id="L179" title="1 of 4 branches missed.">        if (fine || coarse) {</span>
+<span class="pc bpc" id="L180" title="1 of 2 branches missed.">            if (gmap != null) {</span>
+                try {
+<span class="fc" id="L182">                    gmap.setMyLocationEnabled(true); // blue dot</span>
+<span class="pc" id="L183">                } catch (SecurityException ignored) {}</span>
+            }
+<span class="fc" id="L185">            tvStatus.setText(&quot;Location permission granted. Fetching location…&quot;);</span>
+<span class="fc" id="L186">            getAndShowLocation();</span>
+        } else {
+<span class="fc" id="L188">            tvStatus.setText(&quot;Requesting location permission…&quot;);</span>
+<span class="fc" id="L189">            ActivityCompat.requestPermissions(</span>
+                    this,
+                    new String[]{ Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION },
+                    REQ_LOCATION
+            );
+        }
+<span class="fc" id="L195">    }</span>
+    /**
+     * Attempts to get the device's last known location.
+     * If it is not accurate or recent, starts active GPS updates instead.
+     */
+    private void getAndShowLocation() {
+<span class="fc" id="L201">        fused.getLastLocation()</span>
+<span class="fc" id="L202">                .addOnSuccessListener(loc -&gt; {</span>
+                    // accept last location only if it's accurate and recent
+<span class="fc bfc" id="L204" title="All 2 branches covered.">                    if (isUsable(loc)) {</span>
+<span class="fc" id="L205">                        handleLocation(loc);</span>
+                    } else {
+<span class="fc" id="L207">                        tvStatus.setText(&quot;Getting a fresh GPS fix…&quot;);</span>
+<span class="fc" id="L208">                        startLocationUpdates();</span>
+                    }
+<span class="fc" id="L210">                })</span>
+<span class="fc" id="L211">                .addOnFailureListener(e -&gt; {</span>
+<span class="nc" id="L212">                    tvStatus.setText(&quot;Location error: &quot; + e.getMessage());</span>
+                    // Try active updates as a fallback
+<span class="nc" id="L214">                    startLocationUpdates();</span>
+<span class="nc" id="L215">                });</span>
+<span class="fc" id="L216">    }</span>
+    /**
+     * Determines if a location fix is usable based on accuracy and recency.
+     *
+     * @param loc the Location object to evaluate
+     * @return true if location is accurate enough and recent, false otherwise
+     */
+    private boolean isUsable(Location loc) {
+<span class="pc bpc" id="L224" title="1 of 2 branches missed.">        if (loc == null) return false;</span>
+<span class="pc bpc" id="L225" title="2 of 4 branches missed.">        boolean accOK = !loc.hasAccuracy() || loc.getAccuracy() &lt;= 50f; // if no accuracy flag, allow</span>
+<span class="fc" id="L226">        long ageMs = Math.abs(System.currentTimeMillis() - loc.getTime());</span>
+<span class="fc bfc" id="L227" title="All 2 branches covered.">        boolean fresh = ageMs &lt;= 2 * 60 * 1000L; // &lt;= 2 minutes old</span>
+<span class="pc bpc" id="L228" title="1 of 4 branches missed.">        return accOK &amp;&amp; fresh;</span>
+    }
+    /**
+     * Starts requesting high-accuracy GPS location updates until
+     * a fresh fix is received or updates are manually stopped.
+     */
+    @SuppressWarnings(&quot;deprecation&quot;)
+
+    private void startLocationUpdates() {
+<span class="fc bfc" id="L237" title="All 2 branches covered.">        if (requestingUpdates) return;</span>
+
+<span class="pc bpc" id="L239" title="1 of 2 branches missed.">        boolean fine = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)</span>
+                == PackageManager.PERMISSION_GRANTED;
+<span class="pc bpc" id="L241" title="1 of 2 branches missed.">        boolean coarse = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)</span>
+                == PackageManager.PERMISSION_GRANTED;
+<span class="pc bpc" id="L243" title="3 of 4 branches missed.">        if (!fine &amp;&amp; !coarse) return;</span>
+
+<span class="fc" id="L245">        LocationRequest req = LocationRequest.create()</span>
+<span class="fc" id="L246">                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)</span>
+<span class="fc" id="L247">                .setInterval(2000)         // 2s</span>
+<span class="fc" id="L248">                .setFastestInterval(1000); // 1s</span>
+
+<span class="fc" id="L250">        requestingUpdates = true;</span>
+<span class="fc" id="L251">        fused.requestLocationUpdates(req, locationCallback, getMainLooper());</span>
+<span class="fc" id="L252">    }</span>
+    /**
+     * Stops active GPS updates to avoid unnecessary battery drain.
+     */
+    private void stopLocationUpdates() {
+<span class="fc bfc" id="L257" title="All 2 branches covered.">        if (!requestingUpdates) return;</span>
+<span class="fc" id="L258">        fused.removeLocationUpdates(locationCallback);</span>
+<span class="fc" id="L259">        requestingUpdates = false;</span>
+<span class="fc" id="L260">    }</span>
+    /**
+     * Updates map marker/circles for the user's location, computes distance
+     * from campus center, updates eligibility UI, and triggers backend check.
+     *
+     * @param loc fresh user location from GPS provider
+     */
+    private void handleLocation(@NonNull Location loc) {
+<span class="fc" id="L268">        lastLat = loc.getLatitude();</span>
+<span class="fc" id="L269">        lastLng = loc.getLongitude();</span>
+
+<span class="fc" id="L271">        LatLng me = new LatLng(lastLat, lastLng);</span>
+
+        // Update (not spam) user marker/circle
+<span class="pc bpc" id="L274" title="1 of 2 branches missed.">        if (userMarker == null) {</span>
+<span class="fc" id="L275">            userMarker = gmap.addMarker(new MarkerOptions().position(me).title(&quot;You&quot;));</span>
+        } else {
+<span class="nc" id="L277">            userMarker.setPosition(me);</span>
+        }
+<span class="pc bpc" id="L279" title="1 of 2 branches missed.">        if (userCircle == null) {</span>
+<span class="fc" id="L280">            userCircle = gmap.addCircle(new CircleOptions()</span>
+<span class="fc" id="L281">                    .center(me)</span>
+<span class="fc" id="L282">                    .radius(USER_VISUAL_RADIUS_METERS)</span>
+<span class="fc" id="L283">                    .strokeWidth(3f)</span>
+<span class="fc" id="L284">                    .strokeColor(0xAADD8800)   // amber-ish stroke</span>
+<span class="fc" id="L285">                    .fillColor(0x33DD8800));   // translucent fill</span>
+        } else {
+<span class="nc" id="L287">            userCircle.setCenter(me);</span>
+        }
+
+        // First fix: moveCamera; later fixes: animate
+<span class="pc bpc" id="L291" title="1 of 2 branches missed.">        if (Double.isNaN(lastLat)) {</span>
+<span class="nc" id="L292">            gmap.moveCamera(CameraUpdateFactory.newLatLngZoom(me, 16f));</span>
+        } else {
+<span class="fc" id="L294">            gmap.animateCamera(CameraUpdateFactory.newLatLngZoom(me, 16f));</span>
+        }
+
+        // Client-side distance to campus center
+<span class="fc" id="L298">        float[] results = new float[1];</span>
+<span class="fc" id="L299">        Location.distanceBetween(me.latitude, me.longitude, ISU_CENTER.latitude, ISU_CENTER.longitude, results);</span>
+<span class="fc" id="L300">        float dist = results[0];</span>
+<span class="pc bpc" id="L301" title="1 of 2 branches missed.">        insideGeo = (dist &lt;= ISU_RADIUS_METERS);</span>
+
+<span class="fc" id="L303">        String msg = String.format(Locale.US,</span>
+                &quot;You are %.0f m from campus center. %s&quot;,
+<span class="pc bpc" id="L305" title="1 of 2 branches missed.">                dist, insideGeo ? &quot;Inside campus geofence.&quot; : &quot;Outside campus geofence.&quot;);</span>
+<span class="fc" id="L306">        tvStatus.setText(msg);</span>
+
+        // Local gate first (fast UX). If server later confirms eligibility, we keep enabled; if server fails, we do NOT disable.
+<span class="fc" id="L309">        applyGating();</span>
+
+        // Ask backend once per fresh location
+<span class="fc" id="L312">        checkEligibilityWithBackend_NoAuth(lastLat, lastLng);</span>
+<span class="fc" id="L313">    }</span>
+    /**
+     * Enables or disables the Continue button depending on eligibility.
+     * Uses local geofence check first, then upgrades eligibility if backend confirms.
+     */
+    private void applyGating() {
+        boolean enable;
+<span class="pc bpc" id="L320" title="1 of 2 branches missed.">        if (insideGeo) {</span>
+<span class="nc" id="L321">            enable = true;                         // local pass</span>
+        } else {
+<span class="fc" id="L323">            enable = serverEligible;               // only if server says eligible</span>
+        }
+<span class="fc" id="L325">        btnContinue.setEnabled(enable);</span>
+<span class="pc bpc" id="L326" title="1 of 2 branches missed.">        btnContinue.setAlpha(enable ? 1f : 0.5f);</span>
+
+        // Status line decoration
+<span class="pc bpc" id="L329" title="1 of 2 branches missed.">        String base = tvStatus.getText() == null ? &quot;&quot; : tvStatus.getText().toString();</span>
+        String suffix;
+<span class="fc bfc" id="L331" title="All 2 branches covered.">        if (!serverCheckedAtLeastOnce) {</span>
+<span class="fc" id="L332">            suffix = &quot;\nServer: checking…&quot;;</span>
+        } else {
+<span class="pc bpc" id="L334" title="1 of 2 branches missed.">            suffix = &quot;\nServer: &quot; + (serverEligible ? &quot;✅ Eligible&quot; : &quot;⚠️ Unconfirmed&quot;);</span>
+        }
+<span class="pc bpc" id="L336" title="1 of 2 branches missed.">        if (!base.endsWith(suffix)) {</span>
+<span class="fc" id="L337">            tvStatus.setText(base + suffix);</span>
+        }
+<span class="fc" id="L339">    }</span>
+    /**
+     * When returning to the activity, re-checks permissions and refreshes location if needed.
+     */
+
+    @Override
+    protected void onResume() {
+<span class="fc" id="L346">        super.onResume();</span>
+<span class="fc bfc" id="L347" title="All 2 branches covered.">        if (gmap != null) enableMyLocationIfPermitted();</span>
+<span class="fc" id="L348">    }</span>
+    /**
+     * Stops GPS updates when the activity is no longer in the foreground.
+     */
+
+    @Override
+    protected void onPause() {
+<span class="fc" id="L355">        super.onPause();</span>
+<span class="fc" id="L356">        stopLocationUpdates();</span>
+<span class="fc" id="L357">    }</span>
+    /**
+     * Receives user response to location permission request.
+     * If granted, proceeds to location fetch; otherwise shows fallback message.
+     *
+     * @param requestCode permission request identifier
+     * @param permissions list of requested permissions
+     * @param grantResults results for each permission
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+<span class="fc" id="L369">        super.onRequestPermissionsResult(requestCode, permissions, grantResults);</span>
+<span class="pc bpc" id="L370" title="1 of 2 branches missed.">        if (requestCode == REQ_LOCATION) {</span>
+<span class="fc" id="L371">            boolean granted = false;</span>
+<span class="pc bpc" id="L372" title="1 of 2 branches missed.">            for (int r : grantResults) {</span>
+<span class="pc bpc" id="L373" title="1 of 2 branches missed.">                if (r == PackageManager.PERMISSION_GRANTED) {</span>
+<span class="fc" id="L374">                    granted = true; break;</span>
+                }
+            }
+<span class="pc bpc" id="L377" title="1 of 2 branches missed.">            Toast.makeText(this, granted ? &quot;Location granted&quot; : &quot;Location denied&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="pc bpc" id="L378" title="1 of 2 branches missed.">            if (granted) {</span>
+<span class="fc" id="L379">                enableMyLocationIfPermitted();</span>
+            } else {
+<span class="nc" id="L381">                tvStatus.setText(&quot;Location permission denied. Map shows campus, but blue dot is disabled.&quot;);</span>
+            }
+        }
+<span class="fc" id="L384">    }</span>
+    /**
+     * Opens PollsActivity if it exists. Passes user location and geofence state
+     * through Intent extras. If PollsActivity is not found, shows a dialog instead.
+     */
+    private void openPolls() {
+        try {
+<span class="nc" id="L391">            Class&lt;?&gt; polls = Class.forName(&quot;com.example.frontendproject.PollsActivity&quot;);</span>
+<span class="nc" id="L392">            Intent i = new Intent(this, polls);</span>
+<span class="nc bnc" id="L393" title="All 2 branches missed.">            if (!Double.isNaN(lastLat))  i.putExtra(&quot;lat&quot;, lastLat);</span>
+<span class="nc bnc" id="L394" title="All 2 branches missed.">            if (!Double.isNaN(lastLng))  i.putExtra(&quot;lng&quot;, lastLng);</span>
+<span class="nc" id="L395">            i.putExtra(&quot;insideGeo&quot;, insideGeo);</span>
+<span class="nc" id="L396">            startActivity(i);</span>
+<span class="nc" id="L397">        } catch (ClassNotFoundException e) {</span>
+<span class="nc" id="L398">            new androidx.appcompat.app.AlertDialog.Builder(this)</span>
+<span class="nc" id="L399">                    .setTitle(&quot;Eligible to Vote&quot;)</span>
+<span class="nc" id="L400">                    .setMessage(&quot;You are inside the campus geofence.\n\nThis is where the Polling screen will open in the final app.&quot;)</span>
+<span class="nc" id="L401">                    .setPositiveButton(&quot;OK&quot;, null)</span>
+<span class="nc" id="L402">                    .show();</span>
+<span class="nc" id="L403">        }</span>
+<span class="nc" id="L404">    }</span>
+
+
+    /**
+     * Sends the user's latitude and longitude to the backend eligibility endpoint.
+     * Updates UI based on backend eligibility response.
+
+     * Endpoint: POST /location/eligibility (no JWT required)
+     *
+     * @param lat user's latitude
+     * @param lng user's longitude
+     */
+    private void checkEligibilityWithBackend_NoAuth(double lat, double lng) {
+<span class="fc" id="L417">        final String url = BASE_URL + ELIGIBILITY_PATH;</span>
+<span class="fc" id="L418">        final String body = &quot;{\&quot;lat\&quot;:&quot; + lat + &quot;,\&quot;lng\&quot;:&quot; + lng + &quot;}&quot;;</span>
+
+<span class="fc" id="L420">        Log.d(TAG, &quot;POST &quot; + url + &quot; body=&quot; + body);</span>
+
+<span class="fc" id="L422">        StringRequest req = new StringRequest(</span>
+                Request.Method.POST,
+                url,
+                resp -&gt; {
+<span class="fc" id="L426">                    serverCheckedAtLeastOnce = true;</span>
+                    try {
+<span class="fc" id="L428">                        JSONObject o = new JSONObject(resp);</span>
+<span class="fc" id="L429">                        boolean eligible = o.optBoolean(&quot;eligible&quot;, false);</span>
+<span class="fc" id="L430">                        int dist = (int) Math.round(o.optDouble(&quot;distanceMeters&quot;, -1));</span>
+<span class="fc" id="L431">                        serverEligible = eligible;</span>
+
+                        // Update status line (no toasts here)
+<span class="pc bpc" id="L434" title="1 of 2 branches missed.">                        String base = tvStatus.getText() == null ? &quot;&quot; : tvStatus.getText().toString();</span>
+<span class="pc bpc" id="L435" title="1 of 2 branches missed.">                        String serverLine = &quot;Server: &quot; + (eligible ? &quot;✅ Eligible&quot; : &quot;❌ Not eligible&quot;);</span>
+<span class="pc bpc" id="L436" title="1 of 2 branches missed.">                        if (dist &gt;= 0) serverLine += &quot; (&quot; + dist + &quot; m)&quot;;</span>
+<span class="fc" id="L437">                        tvStatus.setText(base.replaceAll(&quot;\\nServer:.*$&quot;, &quot;&quot;) + &quot;\n&quot; + serverLine);</span>
+
+                        // If user was outside locally but server upgrades to eligible, enable
+<span class="fc" id="L440">                        applyGating();</span>
+<span class="nc" id="L441">                    } catch (Exception e) {</span>
+<span class="nc" id="L442">                        tvStatus.setText(appendOrReplaceServerLine(tvStatus.getText().toString(), &quot;Server: ⚠️ Unconfirmed&quot;));</span>
+<span class="nc" id="L443">                        applyGating();</span>
+<span class="fc" id="L444">                    }</span>
+<span class="fc" id="L445">                },</span>
+                err -&gt; {
+<span class="nc" id="L447">                    serverCheckedAtLeastOnce = true;</span>
+<span class="nc" id="L448">                    Log.w(TAG, &quot;Volley error: &quot; + err);</span>
+<span class="nc" id="L449">                    tvStatus.setText(appendOrReplaceServerLine(tvStatus.getText().toString(), &quot;Server: ⚠️ Unconfirmed&quot;));</span>
+<span class="nc" id="L450">                    applyGating();</span>
+<span class="nc" id="L451">                }</span>
+<span class="fc" id="L452">        ) {</span>
+            @Override
+            public byte[] getBody() {
+<span class="fc" id="L455">                return body.getBytes(StandardCharsets.UTF_8);</span>
+            }
+            @Override
+            public String getBodyContentType() {
+<span class="fc" id="L459">                return &quot;application/json; charset=UTF-8&quot;;</span>
+            }
+        };
+
+        // Faster feedback while testing
+<span class="fc" id="L464">        req.setRetryPolicy(new DefaultRetryPolicy(</span>
+                4000, // 4s timeout
+                0,    // no retries
+                1f
+        ));
+
+<span class="fc" id="L470">        AppRequestQueue.get(this).add(req);</span>
+<span class="fc" id="L471">    }</span>
+    /**
+     * Utility helper to update (replace or append) the &quot;Server:&quot; line
+     * in the status TextView without duplicating it.
+     *
+     * @param current current status text
+     * @param serverLine new server status line to place
+     * @return updated status text including the new server line
+     */
+
+    static String appendOrReplaceServerLine(String current, String serverLine) {
+<span class="fc bfc" id="L482" title="All 2 branches covered.">        if (current == null) return serverLine;</span>
+<span class="fc bfc" id="L483" title="All 2 branches covered.">        if (current.contains(&quot;\nServer:&quot;)) {</span>
+<span class="fc" id="L484">            return current.replaceAll(&quot;\\nServer:.*$&quot;, &quot;\n&quot; + serverLine);</span>
+        } else {
+<span class="fc" id="L486">            return current + &quot;\n&quot; + serverLine;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span>Generated by the Android Gradle plugin 8.13.1</div></body></html>

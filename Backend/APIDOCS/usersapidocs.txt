@@ -1,0 +1,91 @@
+User API Reference
+==================
+
+Summary
+A new user signs up with POST /users, then verifies their account using the email token from GET /users/verify.
+After verification, they can log in with POST /users/login, which returns an authentication token.
+The token must be included in the Authorization header for protected endpoints such as GET /users/me or POST /users/logout.
+If the user forgets their password, they can request a reset link with PUT /users/forgot-password and reset it using PUT /users/reset-password.
+Users can also be deleted with DELETE /users/{email}.
+
+Base Path: /users
+
+----------------------------------------------------
+1. Create User
+   POST /users
+   Request Body (JSON):
+   {
+     "emailId": "user@example.com",
+     "password": "password123",
+     "name": "John Doe"
+   }
+   Response:
+   { "message": "success" }
+   { "message": "failure" }
+
+----------------------------------------------------
+2. Login
+   POST /users/login
+   Request Body (JSON):
+   {
+     "email": "user@example.com",
+     "password": "password123"
+   }
+   Response:
+   { "message": "Login successful", "token": "{authToken}" }
+   { "message": "Invalid email, password, or not verified" }
+
+----------------------------------------------------
+3. Logout
+   POST /users/logout
+   Headers:
+   Authorization: {authToken}
+   Response:
+   { "message": "Logout successful" }
+   { "message": "Invalid token" }
+
+----------------------------------------------------
+4. Current User
+   GET /users/me
+   Headers:
+   Authorization: {authToken}
+   Response:
+   { "user": "user@example.com" }
+   { "message": "Invalid or expired token" }
+
+----------------------------------------------------
+5. Verify User
+   GET /users/verify?token={verificationToken}
+   Response:
+   { "message": "Email verified successfully!" }
+   { "message": "Invalid or expired token!" }
+
+----------------------------------------------------
+6. Forgot Password
+   PUT /users/forgot-password
+   Request Body (JSON):
+   {
+     "email": "user@example.com"
+   }
+   Response:
+   { "message": "Password reset link sent to your email" }
+   { "message": "failure" }
+
+----------------------------------------------------
+7. Reset Password
+   PUT /users/reset-password
+   Request Body (JSON):
+   {
+     "token": "{resetToken}",
+     "newPassword": "newPassword123"
+   }
+   Response:
+   { "message": "Password reset successful" }
+   { "message": "Invalid or expired reset token" }
+
+----------------------------------------------------
+8. Delete User
+   DELETE /users/{email}
+   Response:
+   { "message": "success" }
+   { "message": "failure" }

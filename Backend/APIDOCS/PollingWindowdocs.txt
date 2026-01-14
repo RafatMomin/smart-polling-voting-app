@@ -1,0 +1,756 @@
+Polling Window API Reference
+==============================
+
+Summary
+-------
+The Polling Window API allows administrators to control when and who can vote on polls through
+time-based voting windows. This is ideal for classroom scenarios where an instructor wants
+different sections or groups to vote on the same poll at different times. The system supports
+user groups (many-to-many: groups can have many users, users can be in many groups) and
+polling windows (one-to-many: one poll can have many windows; many-to-many: one window can
+target many groups).
+
+Features:
+- Create and manage user groups (sections, classes, teams)
+- Add/remove members from groups in bulk or individually
+- Create time-based polling windows for specific polls
+- Target windows to specific groups or individual users
+- Open/close windows manually to control voting access
+- Automatic time-based window validation
+- Only one window can be active per poll at a time
+- Backward compatible: polls without windows allow unrestricted voting
+- Vote authorization automatically enforced when windows exist
+
+Workflow:
+1. Create a poll (initially, no one can vote)
+2. Create groups and add members
+3. Create polling windows targeting specific groups/users
+4. Open a window to allow voting for that group
+5. Close window and open next window for different group
+
+Base Path: /groups and /polling-windows
+
+----------------------------------------------------
+GROUP MANAGEMENT ENDPOINTS
+----------------------------------------------------
+
+1. Create Group
+POST /groups
+
+Request Body (JSON):
+{
+  "name": "Section 3",
+  "description": "CS101 Section 3 - Fall 2025",
+  "creatorEmail": "professor@university.edu"
+}
+
+Response (JSON):
+{
+  "id": 1,
+  "name": "Section 3",
+  "description": "CS101 Section 3 - Fall 2025",
+  "creatorEmail": "professor@university.edu",
+  "memberEmails": []
+}
+
+Error Responses:
+{ "error": "Name and creatorEmail are required" }
+
+----------------------------------------------------
+2. Add Member to Group
+POST /groups/{groupId}/members
+
+Path Parameters:
+- groupId (Long, required): The ID of the group
+
+Request Body (JSON):
+{
+  "memberEmail": "student1@university.edu"
+}
+
+Response (JSON):
+{
+  "id": 1,
+  "name": "Section 3",
+  "description": "CS101 Section 3 - Fall 2025",
+  "creatorEmail": "professor@university.edu",
+  "memberEmails": ["student1@university.edu"]
+}
+
+Error Responses:
+{ "error": "memberEmail is required" }
+{ "error": "Group not found" }
+{ "error": "User with email student1@university.edu does not exist" }
+
+----------------------------------------------------
+3. Add Multiple Members to Group
+POST /groups/{groupId}/members/batch
+
+Path Parameters:
+- groupId (Long, required): The ID of the group
+
+Request Body (JSON):
+{
+  "memberEmails": [
+    "student1@university.edu",
+    "student2@university.edu",
+    "student3@university.edu",
+    "student4@university.edu"
+  ]
+}
+
+Response (JSON):
+{
+  "id": 1,
+  "name": "Section 3",
+  "description": "CS101 Section 3 - Fall 2025",
+  "creatorEmail": "professor@university.edu",
+  "memberEmails": [
+    "student1@university.edu",
+    "student2@university.edu",
+    "student3@university.edu",
+    "student4@university.edu"
+  ]
+}
+
+Note: Only adds users that exist in the system. Silently skips non-existent users.
+
+Error Responses:
+{ "error": "memberEmails are required" }
+{ "error": "Group not found" }
+
+----------------------------------------------------
+4. Remove Member from Group
+DELETE /groups/{groupId}/members/{memberEmail}
+
+Path Parameters:
+- groupId (Long, required): The ID of the group
+- memberEmail (String, required): Email of the member to remove
+
+Response (JSON):
+{
+  "id": 1,
+  "name": "Section 3",
+  "description": "CS101 Section 3 - Fall 2025",
+  "creatorEmail": "professor@university.edu",
+  "memberEmails": [
+    "student2@university.edu",
+    "student3@university.edu",
+    "student4@university.edu"
+  ]
+}
+
+Error Responses:
+{ "error": "Group not found" }
+
+----------------------------------------------------
+5. Get Group by ID
+GET /groups/{groupId}
+
+Path Parameters:
+- groupId (Long, required): The ID of the group
+
+Response (JSON):
+{
+  "id": 1,
+  "name": "Section 3",
+  "description": "CS101 Section 3 - Fall 2025",
+  "creatorEmail": "professor@university.edu",
+  "memberEmails": [
+    "student1@university.edu",
+    "student2@university.edu",
+    "student3@university.edu",
+    "student4@university.edu"
+  ]
+}
+
+Error Responses:
+{ "error": "Group not found" }
+
+----------------------------------------------------
+6. Get All Groups
+GET /groups
+
+Response (JSON):
+[
+  {
+    "id": 1,
+    "name": "Section 3",
+    "description": "CS101 Section 3 - Fall 2025",
+    "creatorEmail": "professor@university.edu",
+    "memberEmails": ["student1@university.edu", "student2@university.edu"]
+  },
+  {
+    "id": 2,
+    "name": "Section 4",
+    "description": "CS101 Section 4 - Fall 2025",
+    "creatorEmail": "professor@university.edu",
+    "memberEmails": ["student5@university.edu", "student6@university.edu"]
+  }
+]
+
+----------------------------------------------------
+7. Get Groups Created by User
+GET /groups/creator/{email}
+
+Path Parameters:
+- email (String, required): Creator's email address
+
+Response (JSON):
+[
+  {
+    "id": 1,
+    "name": "Section 3",
+    "description": "CS101 Section 3 - Fall 2025",
+    "creatorEmail": "professor@university.edu",
+    "memberEmails": ["student1@university.edu", "student2@university.edu"]
+  }
+]
+
+----------------------------------------------------
+8. Get Groups User Belongs To
+GET /groups/member/{email}
+
+Path Parameters:
+- email (String, required): Member's email address
+
+Response (JSON):
+[
+  {
+    "id": 1,
+    "name": "Section 3",
+    "description": "CS101 Section 3 - Fall 2025",
+    "creatorEmail": "professor@university.edu",
+    "memberEmails": ["student1@university.edu", "student2@university.edu"]
+  },
+  {
+    "id": 5,
+    "name": "Study Group A",
+    "description": "Algorithms study group",
+    "creatorEmail": "student2@university.edu",
+    "memberEmails": ["student1@university.edu", "student3@university.edu"]
+  }
+]
+
+----------------------------------------------------
+9. Delete Group
+DELETE /groups/{groupId}
+
+Path Parameters:
+- groupId (Long, required): The ID of the group
+
+Response (JSON):
+{ "message": "Group deleted successfully" }
+
+Error Responses:
+{ "error": "Group not found" }
+
+Note: Deleting a group does not delete polling windows that reference it,
+but those windows will no longer be able to authorize votes based on that group.
+
+----------------------------------------------------
+POLLING WINDOW ENDPOINTS
+----------------------------------------------------
+
+10. Create Polling Window
+POST /polling-windows
+
+Request Body (JSON):
+{
+  "pollId": 1,
+  "windowName": "Section 3 Morning Session",
+  "creatorEmail": "professor@university.edu",
+  "startTime": "2025-11-05T10:00:00",
+  "endTime": "2025-11-05T10:30:00",
+  "groupIds": [1, 2],
+  "individualUserEmails": ["special-student@university.edu"]
+}
+
+Field Descriptions:
+- pollId (required): ID of the poll this window is for
+- windowName (required): Descriptive name for the window
+- creatorEmail (required): Email of the user creating the window
+- startTime (optional): When the window becomes valid (ISO 8601 format)
+- endTime (optional): When the window expires (ISO 8601 format)
+- groupIds (optional): Array of group IDs that can vote in this window
+- individualUserEmails (optional): Array of individual user emails (in addition to groups)
+
+Response (JSON):
+{
+  "id": 1,
+  "poll": {
+    "id": 1,
+    "title": "Do you like coffee?",
+    "type": "YES_NO",
+    "active": true
+  },
+  "name": "Section 3 Morning Session",
+  "startTime": "2025-11-05T10:00:00",
+  "endTime": "2025-11-05T10:30:00",
+  "active": false,
+  "creatorEmail": "professor@university.edu",
+  "targetGroups": [
+    {
+      "id": 1,
+      "name": "Section 3",
+      "memberEmails": ["student1@university.edu", "student2@university.edu"]
+    },
+    {
+      "id": 2,
+      "name": "Section 4",
+      "memberEmails": ["student5@university.edu", "student6@university.edu"]
+    }
+  ],
+  "targetIndividualUsers": ["special-student@university.edu"]
+}
+
+Notes:
+- If startTime is null, window is valid from creation time
+- If endTime is null, window has no expiration
+- If groupIds and individualUserEmails are both empty/null, anyone can vote when window is active
+- Window is created in inactive state; must be explicitly opened
+
+Error Responses:
+{ "error": "pollId, windowName, and creatorEmail are required" }
+{ "error": "Poll not found" }
+{ "error": "Group not found: 5" }
+
+----------------------------------------------------
+11. Open Polling Window
+PUT /polling-windows/{windowId}/open
+
+Path Parameters:
+- windowId (Long, required): The ID of the polling window
+
+Response (JSON):
+{
+  "message": "Polling window opened",
+  "window": {
+    "id": 1,
+    "name": "Section 3 Morning Session",
+    "active": true,
+    "startTime": "2025-11-05T10:00:00",
+    "endTime": "2025-11-05T10:30:00"
+  }
+}
+
+Important:
+- Opening a window automatically closes all other active windows for the same poll
+- Only one window can be active per poll at a time
+- Users in the target groups/individuals can now vote on the poll
+
+Error Responses:
+{ "error": "Polling window not found" }
+
+----------------------------------------------------
+12. Close Polling Window
+PUT /polling-windows/{windowId}/close
+
+Path Parameters:
+- windowId (Long, required): The ID of the polling window
+
+Response (JSON):
+{
+  "message": "Polling window closed",
+  "window": {
+    "id": 1,
+    "name": "Section 3 Morning Session",
+    "active": false,
+    "startTime": "2025-11-05T10:00:00",
+    "endTime": "2025-11-05T10:30:00"
+  }
+}
+
+Important:
+- Users can no longer vote through this window
+- If this was the only active window, no one can vote on the poll until another window opens
+
+Error Responses:
+{ "error": "Polling window not found" }
+
+----------------------------------------------------
+13. Check if User Can Vote on Poll
+GET /polling-windows/poll/{pollId}/can-vote
+
+Path Parameters:
+- pollId (Long, required): The ID of the poll
+
+Query Parameters:
+- userEmail (String, required): Email of the user to check
+
+Request Example:
+GET /polling-windows/poll/1/can-vote?userEmail=student1@university.edu
+
+Response (JSON):
+{
+  "canVote": true,
+  "pollId": 1,
+  "userEmail": "student1@university.edu"
+}
+
+Response (JSON) - Not Authorized:
+{
+  "canVote": false,
+  "pollId": 1,
+  "userEmail": "unauthorized@example.com"
+}
+
+Authorization Logic:
+- If poll has no windows: true (backward compatible)
+- If poll has windows but none are active: false
+- If active window has no restrictions (no groups, no individuals): true
+- If user is in a target group: true
+- If user is individually listed: true
+- Otherwise: false
+
+----------------------------------------------------
+14. Get Currently Active Window for Poll
+GET /polling-windows/poll/{pollId}/active
+
+Path Parameters:
+- pollId (Long, required): The ID of the poll
+
+Response (JSON) - Active Window Exists:
+{
+  "id": 1,
+  "poll": {
+    "id": 1,
+    "title": "Do you like coffee?",
+    "type": "YES_NO"
+  },
+  "name": "Section 3 Morning Session",
+  "startTime": "2025-11-05T10:00:00",
+  "endTime": "2025-11-05T10:30:00",
+  "active": true,
+  "creatorEmail": "professor@university.edu",
+  "targetGroups": [
+    {
+      "id": 1,
+      "name": "Section 3",
+      "memberEmails": ["student1@university.edu", "student2@university.edu"]
+    }
+  ],
+  "targetIndividualUsers": []
+}
+
+Response (JSON) - No Active Window:
+{ "message": "No active polling window" }
+
+----------------------------------------------------
+15. Get All Windows for Poll
+GET /polling-windows/poll/{pollId}
+
+Path Parameters:
+- pollId (Long, required): The ID of the poll
+
+Response (JSON):
+[
+  {
+    "id": 1,
+    "name": "Section 3 Morning Session",
+    "startTime": "2025-11-05T10:00:00",
+    "endTime": "2025-11-05T10:30:00",
+    "active": false,
+    "creatorEmail": "professor@university.edu",
+    "targetGroups": [
+      {
+        "id": 1,
+        "name": "Section 3"
+      }
+    ],
+    "targetIndividualUsers": []
+  },
+  {
+    "id": 2,
+    "name": "Section 4 Afternoon Session",
+    "startTime": "2025-11-05T14:00:00",
+    "endTime": "2025-11-05T14:30:00",
+    "active": true,
+    "creatorEmail": "professor@university.edu",
+    "targetGroups": [
+      {
+        "id": 2,
+        "name": "Section 4"
+      }
+    ],
+    "targetIndividualUsers": []
+  }
+]
+
+----------------------------------------------------
+16. Get Polling Window by ID
+GET /polling-windows/{windowId}
+
+Path Parameters:
+- windowId (Long, required): The ID of the polling window
+
+Response (JSON):
+{
+  "id": 1,
+  "poll": {
+    "id": 1,
+    "title": "Do you like coffee?",
+    "type": "YES_NO",
+    "active": true
+  },
+  "name": "Section 3 Morning Session",
+  "startTime": "2025-11-05T10:00:00",
+  "endTime": "2025-11-05T10:30:00",
+  "active": false,
+  "creatorEmail": "professor@university.edu",
+  "targetGroups": [
+    {
+      "id": 1,
+      "name": "Section 3",
+      "description": "CS101 Section 3 - Fall 2025",
+      "memberEmails": ["student1@university.edu", "student2@university.edu"]
+    }
+  ],
+  "targetIndividualUsers": ["special-student@university.edu"]
+}
+
+Error Responses:
+{ "error": "Polling window not found" }
+
+----------------------------------------------------
+17. Update Window End Time
+PUT /polling-windows/{windowId}/end-time
+
+Path Parameters:
+- windowId (Long, required): The ID of the polling window
+
+Request Body (JSON):
+{
+  "endTime": "2025-11-05T12:00:00"
+}
+
+Response (JSON):
+{
+  "id": 1,
+  "name": "Section 3 Morning Session",
+  "startTime": "2025-11-05T10:00:00",
+  "endTime": "2025-11-05T12:00:00",
+  "active": true,
+  "creatorEmail": "professor@university.edu"
+}
+
+Use Case: Extend voting time if needed
+
+Error Responses:
+{ "error": "endTime is required" }
+{ "error": "Polling window not found" }
+
+----------------------------------------------------
+18. Delete Polling Window
+DELETE /polling-windows/{windowId}
+
+Path Parameters:
+- windowId (Long, required): The ID of the polling window
+
+Response (JSON):
+{ "message": "Polling window deleted successfully" }
+
+Error Responses:
+{ "error": "Polling window not found" }
+
+Note: Deleting a window does not affect votes that were cast through it.
+
+----------------------------------------------------
+VOTING WITH POLLING WINDOWS
+----------------------------------------------------
+
+When a user attempts to vote on a poll (using existing Poll API endpoints):
+
+POST /polls/{pollId}/vote?userId={email}&numericValue=1
+Request Body: { "lat": 42.0266, "lng": -93.61952 }
+
+The system automatically:
+1. Checks if the poll has any polling windows
+2. If NO windows exist → Allow vote (backward compatible)
+3. If windows exist → Check if any active window authorizes the user
+4. Authorize if:
+   - User is in a target group of an active window, OR
+   - User is individually listed in an active window, OR
+   - Active window has no restrictions (empty groups and individuals)
+5. If authorized → Allow vote
+6. If not authorized → Reject with error
+
+Error Response (Not Authorized):
+{ "error": "User is not authorized to vote in the current polling window" }
+
+This validation is automatic and transparent to the voting API.
+
+----------------------------------------------------
+DATABASE SCHEMA
+----------------------------------------------------
+
+Group Entity:
+- id (Long, Primary Key)
+- name (String, NOT NULL)
+- description (String)
+- creatorEmail (String, NOT NULL)
+- memberEmails (Set<String>, stored in group_members table)
+
+PollingWindow Entity:
+- id (Long, Primary Key)
+- poll_id (Long, Foreign Key to Poll, NOT NULL)
+- name (String, NOT NULL)
+- startTime (LocalDateTime)
+- endTime (LocalDateTime)
+- isActive (Boolean, default false)
+- creatorEmail (String, NOT NULL)
+
+Join Tables:
+- group_members (group_id, user_email): Many-to-Many Group ↔ Users
+- window_groups (window_id, group_id): Many-to-Many PollingWindow ↔ Group
+- window_individual_users (window_id, user_email): Individual user targets
+
+Relationships:
+- Poll â†' PollingWindow (One-to-Many)
+- PollingWindow â†' Poll (Many-to-One)
+- PollingWindow â†" Group (Many-to-Many)
+- Group â†" Users (Many-to-Many, via email references)
+
+----------------------------------------------------
+USE CASE EXAMPLE: CLASSROOM POLLING
+----------------------------------------------------
+
+Scenario: Professor wants all 3 sections to vote on the same poll, but separately.
+
+Step 1 - Create Poll:
+POST /polls/yesno
+{
+  "title": "Should we have a review session before the exam?",
+  "context": "This poll helps us gauge interest in an optional review session"
+}
+Response: { "id": 50, ... }
+
+Step 2 - Create Groups:
+POST /groups
+{ "name": "Section 1", "creatorEmail": "prof@university.edu" }
+Response: { "id": 1, ... }
+
+POST /groups
+{ "name": "Section 2", "creatorEmail": "prof@university.edu" }
+Response: { "id": 2, ... }
+
+POST /groups
+{ "name": "Section 3", "creatorEmail": "prof@university.edu" }
+Response: { "id": 3, ... }
+
+Step 3 - Add Students to Groups:
+POST /groups/1/members/batch
+{
+  "memberEmails": ["alice@uni.edu", "bob@uni.edu", "charlie@uni.edu"]
+}
+
+POST /groups/2/members/batch
+{
+  "memberEmails": ["david@uni.edu", "eve@uni.edu", "frank@uni.edu"]
+}
+
+POST /groups/3/members/batch
+{
+  "memberEmails": ["grace@uni.edu", "henry@uni.edu", "iris@uni.edu"]
+}
+
+Step 4 - Create Polling Windows:
+POST /polling-windows
+{
+  "pollId": 50,
+  "windowName": "Section 1 Window",
+  "creatorEmail": "prof@university.edu",
+  "startTime": "2025-11-05T10:00:00",
+  "endTime": "2025-11-05T10:30:00",
+  "groupIds": [1]
+}
+Response: { "id": 101, ... }
+
+POST /polling-windows
+{
+  "pollId": 50,
+  "windowName": "Section 2 Window",
+  "creatorEmail": "prof@university.edu",
+  "startTime": "2025-11-05T11:00:00",
+  "endTime": "2025-11-05T11:30:00",
+  "groupIds": [2]
+}
+Response: { "id": 102, ... }
+
+POST /polling-windows
+{
+  "pollId": 50,
+  "windowName": "Section 3 Window",
+  "creatorEmail": "prof@university.edu",
+  "startTime": "2025-11-05T14:00:00",
+  "endTime": "2025-11-05T14:30:00",
+  "groupIds": [3]
+}
+Response: { "id": 103, ... }
+
+Step 5 - During Class (10:00 AM - Section 1):
+PUT /polling-windows/101/open
+
+Students from Section 1 can now vote:
+POST /polls/50/vote?userId=alice@uni.edu&numericValue=1
+{ "lat": 42.0266, "lng": -93.61952 }
+Response: { "message": "Vote added" }
+
+Students from other sections cannot vote:
+POST /polls/50/vote?userId=david@uni.edu&numericValue=1
+{ "lat": 42.0266, "lng": -93.61952 }
+Response: { "error": "User is not authorized to vote in the current polling window" }
+
+Step 6 - End Section 1, Start Section 2 (11:00 AM):
+PUT /polling-windows/101/close
+PUT /polling-windows/102/open
+
+Now Section 2 students can vote, Section 1 cannot vote again.
+
+Step 7 - View Results (After All Sections Vote):
+GET /polls/50/results
+Response: { "yes": 24, "no": 3, "total": 27, "yesPercent": 88.89 }
+
+----------------------------------------------------
+TECHNICAL NOTES
+----------------------------------------------------
+
+Authorization Logic Implementation:
+1. When no windows exist for a poll → unrestricted voting (backward compatible)
+2. When windows exist but none are active → no one can vote
+3. When a window is active:
+   - If window has NO groups and NO individuals → anyone can vote
+   - If window has groups or individuals → only authorized users can vote
+4. User is authorized if:
+   - Their email is in targetIndividualUsers, OR
+   - They belong to any group in targetGroups
+
+Time Validation:
+- Window.isCurrentlyOpen() checks:
+  - isActive flag must be true (manual control)
+  - Current time >= startTime (or startTime is null)
+  - Current time < endTime (or endTime is null)
+- Both manual (isActive flag) and time-based controls must pass
+
+Single Active Window Rule:
+- Opening a window closes all other active windows for that poll
+- Enforced at service layer in openPollingWindow()
+- Prevents conflicts and ensures clear authorization
+
+Backward Compatibility:
+- Existing polls without windows work as before
+- Creating a poll does not automatically create windows
+- Windows are optional enhancement to poll functionality
+- All existing Poll API endpoints unchanged
+
+Performance Considerations:
+- Group membership checked in memory (Set operations)
+- Active window query optimized with JPA query
+- Lazy loading used for poll relationships
+- Transaction management ensures consistency
+
+Validation:
+- User existence checked when adding to groups
+- Poll existence checked when creating windows
+- Group existence checked when creating windows
+- All entities validated before persistence

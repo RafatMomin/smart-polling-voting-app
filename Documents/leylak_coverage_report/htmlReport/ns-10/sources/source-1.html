@@ -1,0 +1,150 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > LiveResultsController</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.LiveResults.controller</a>
+</div>
+
+<h1>Coverage Summary for Class: LiveResultsController (onetoone.LiveResults.controller)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">LiveResultsController</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    25%
+  </span>
+  <span class="absValue">
+    (1/4)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    25%
+  </span>
+  <span class="absValue">
+    (1/4)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.LiveResults.controller;
+&nbsp;
+&nbsp;import onetoone.LiveResults.dto.LiveResultsMessage;
+&nbsp;import onetoone.LiveResults.service.LiveResultsService;
+&nbsp;import org.springframework.beans.factory.annotation.Autowired;
+&nbsp;import org.springframework.messaging.handler.annotation.DestinationVariable;
+&nbsp;import org.springframework.messaging.handler.annotation.MessageMapping;
+&nbsp;import org.springframework.messaging.handler.annotation.SendTo;
+&nbsp;import org.springframework.messaging.simp.annotation.SubscribeMapping;
+&nbsp;
+&nbsp;import org.springframework.web.bind.annotation.*;
+&nbsp;
+&nbsp;@RestController
+&nbsp;@RequestMapping(&quot;/live-results&quot;)
+&nbsp;@CrossOrigin(origins = &quot;*&quot;) // for testing
+<b class="fc">&nbsp;public class LiveResultsController {</b>
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private LiveResultsService liveResultsService;
+&nbsp;
+&nbsp;    // when someone first subscribes, send results to them
+&nbsp;    @SubscribeMapping(&quot;/poll/{pollId}&quot;)
+&nbsp;    public LiveResultsMessage sendInitialResults(@DestinationVariable Long pollId) {
+<b class="nc">&nbsp;        return liveResultsService.getResultsSnapshot(pollId);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /* get current poll results
+&nbsp;     * optional for testing and to get initial data before subscribing to websocket
+&nbsp;     * Frontend can call this to get initial data before subscribing to WebSocket
+&nbsp;     */
+&nbsp;    @GetMapping(&quot;/poll/{pollId}&quot;)
+&nbsp;    public LiveResultsMessage getPollResults(@PathVariable Long pollId) {
+<b class="nc">&nbsp;        return liveResultsService.getResultsSnapshot(pollId);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /* WebSocket message handler: allows a request to refresh by using WebSocket
+&nbsp;     * to request send to: /app/poll/{pollId}/refresh
+&nbsp;     * response broadcasts to: /topic/poll/{pollId}
+&nbsp;     * optional manual refresh for testing
+&nbsp;     */
+&nbsp;    @MessageMapping(&quot;/poll/{pollId}/refresh&quot;)
+&nbsp;    @SendTo(&quot;/topic/poll/{pollId}&quot;)
+&nbsp;    public LiveResultsMessage refreshPollResults(@DestinationVariable Long pollId) {
+<b class="nc">&nbsp;        return liveResultsService.getResultsSnapshot(pollId);</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

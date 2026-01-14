@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PollsRecycle.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debug</a> &gt; <a href="index.source.html" class="el_package">com.example.frontendproject</a> &gt; <span class="el_source">PollsRecycle.java</span></div><h1>PollsRecycle.java</h1><pre class="source lang-java linenums">package com.example.frontendproject;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+
+import androidx.annotation.LayoutRes;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.chip.Chip;
+
+import java.util.List;
+
+public class PollsRecycle extends RecyclerView.Adapter&lt;PollsRecycle.VH&gt; {
+
+    public interface OnClick { void onClick(Poll p); }
+
+    private static final int VT_YESNO = 0;
+    private static final int VT_RATING = 1;
+    private static final int VT_MULTIPLE = 2;
+    private static final int VT_RANK = 3;
+
+    private final List&lt;Poll&gt; data;
+    private final OnClick cb;
+
+<span class="fc" id="L28">    public PollsRecycle(List&lt;Poll&gt; data, OnClick cb) {</span>
+<span class="fc" id="L29">        this.data = data;</span>
+<span class="fc" id="L30">        this.cb = cb;</span>
+<span class="fc" id="L31">        setHasStableIds(false);</span>
+<span class="fc" id="L32">    }</span>
+
+    @Override
+    public int getItemCount() {
+<span class="fc" id="L36">        return data.size();</span>
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+<span class="fc" id="L41">        String code = toCode(data.get(position).type);</span>
+<span class="fc bfc" id="L42" title="All 2 branches covered.">        if (&quot;YES_NO&quot;.equals(code)) return VT_YESNO;</span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">        if (&quot;RATING&quot;.equals(code)) return VT_RATING;</span>
+<span class="fc bfc" id="L44" title="All 2 branches covered.">        if (&quot;MULTIPLE_CHOICE&quot;.equals(code)) return VT_MULTIPLE;</span>
+<span class="fc" id="L45">        return VT_RANK;</span>
+    }
+
+    @NonNull
+    @Override
+    public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        @LayoutRes int layout;
+<span class="fc bfc" id="L52" title="All 2 branches covered.">        if (viewType == VT_YESNO) {</span>
+<span class="fc" id="L53">            layout = R.layout.activity_poll1;</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">        } else if (viewType == VT_RATING) {</span>
+<span class="fc" id="L55">            layout = R.layout.activity_poll2;</span>
+<span class="fc bfc" id="L56" title="All 2 branches covered.">        } else if (viewType == VT_MULTIPLE) {</span>
+<span class="fc" id="L57">            layout = R.layout.activity_poll3;</span>
+        } else {
+<span class="fc" id="L59">            layout = R.layout.activity_poll4;</span>
+        }
+<span class="fc" id="L61">        View v = LayoutInflater.from(parent.getContext()).inflate(layout, parent, false);</span>
+<span class="fc" id="L62">        return new VH(v);</span>
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull VH h, int position) {
+<span class="fc" id="L67">        Poll p = data.get(position);</span>
+
+<span class="fc" id="L69">        String title = &quot;&quot;;</span>
+<span class="pc bpc" id="L70" title="1 of 2 branches missed.">        if (p.title != null) {</span>
+<span class="fc" id="L71">            title = p.title;</span>
+        }
+
+<span class="fc" id="L74">        String code = toCode(p.type);</span>
+<span class="fc" id="L75">        String pretty = toPretty(code);</span>
+
+<span class="pc bpc" id="L77" title="1 of 2 branches missed.">        if (h.title != null) {</span>
+<span class="fc" id="L78">            String display = title;</span>
+<span class="pc bpc" id="L79" title="1 of 2 branches missed.">            if (p.isPrivate()) {</span>
+<span class="nc" id="L80">                display = &quot;🔒 &quot; + display; // show lock for private polls</span>
+            }
+<span class="fc" id="L82">            h.title.setText(display);</span>
+        }
+
+<span class="pc bpc" id="L85" title="1 of 2 branches missed.">        if (h.subtitle != null) {</span>
+<span class="fc" id="L86">            h.subtitle.setText(pretty);</span>
+        }
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">        if (h.status != null) {</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">            if (p.now) {</span>
+<span class="fc" id="L90">                h.status.setText(&quot;Online&quot;);</span>
+            } else {
+<span class="fc" id="L92">                h.status.setText(&quot;Closed&quot;);</span>
+            }
+        }
+
+<span class="pc" id="L96">        h.itemView.setOnClickListener(v -&gt; cb.onClick(p));</span>
+<span class="fc" id="L97">    }</span>
+
+    private String toCode(String raw) {
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">        if (raw == null) return &quot;YES_NO&quot;;</span>
+<span class="fc" id="L101">        String s = raw.trim();</span>
+<span class="pc bpc" id="L102" title="1 of 2 branches missed.">        if (s.isEmpty()) return &quot;YES_NO&quot;;</span>
+<span class="fc" id="L103">        s = s.replace(' ', '_');</span>
+<span class="fc" id="L104">        s = s.replace('-', '_');</span>
+<span class="fc" id="L105">        s = s.toUpperCase();</span>
+<span class="pc bpc" id="L106" title="1 of 2 branches missed.">        if (s.equals(&quot;YES_OR_NO&quot;)) s = &quot;YES_NO&quot;;</span>
+<span class="fc" id="L107">        return s;</span>
+    }
+
+    private String toPretty(String code) {
+<span class="pc bpc" id="L111" title="1 of 2 branches missed.">        if (code == null) return &quot;&quot;;</span>
+<span class="fc bfc" id="L112" title="All 2 branches covered.">        if (code.equals(&quot;YES_NO&quot;)) return &quot;YES OR NO&quot;;</span>
+<span class="fc bfc" id="L113" title="All 2 branches covered.">        if (code.equals(&quot;MULTIPLE_CHOICE&quot;)) return &quot;MULTIPLE_CHOICE&quot;;</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">        if (code.equals(&quot;RANKING&quot;)) return &quot;RANKING&quot;;</span>
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">        if (code.equals(&quot;RATING&quot;)) return &quot;RATING&quot;;</span>
+<span class="nc" id="L116">        return code.replace('_', ' ');</span>
+    }
+
+    static class VH extends RecyclerView.ViewHolder {
+        TextView title, subtitle;
+        Chip status;
+
+        VH(@NonNull View v) {
+<span class="fc" id="L124">            super(v);</span>
+<span class="fc" id="L125">            title = v.findViewById(R.id.rowTitle);</span>
+<span class="fc" id="L126">            subtitle = v.findViewById(R.id.rowSubtitle);</span>
+<span class="fc" id="L127">            status = v.findViewById(R.id.chipStatus);</span>
+<span class="fc" id="L128">        }</span>
+    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span>Generated by the Android Gradle plugin 8.13.1</div></body></html>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <ProgressBar
+            android:id="@+id/progress"
+            android:visibility="gone"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"/>
+
+        <EditText
+            android:id="@+id/etWindowName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Window Name"/>
+
+        <EditText
+            android:id="@+id/etStart"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Start Time"/>
+
+        <Button
+            android:id="@+id/btnPickStart"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pick Start Time"
+            android:layout_marginTop="4dp"/>
+
+        <EditText
+            android:id="@+id/etEnd"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="End Time"
+            android:layout_marginTop="8dp"/>
+
+        <Button
+            android:id="@+id/btnPickEnd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pick End Time"
+            android:layout_marginTop="4dp"/>
+
+        <TextView
+            android:id="@+id/txtGroups"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Select Groups:"
+            android:textStyle="bold"
+            android:layout_marginTop="12dp"/>
+
+        <Button
+            android:id="@+id/btnCreateGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="➕ Create New Group"
+            android:layout_marginTop="6dp"/>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvGroups"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_marginTop="10dp"/>
+
+        <EditText
+            android:id="@+id/etEmails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Additional Emails (comma separated)"
+            android:layout_marginTop="12dp"/>
+
+        <Button
+            android:id="@+id/btnAddWindow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Add Polling Window"
+            android:layout_marginTop="14dp"/>
+
+        <Button
+            android:id="@+id/btnDone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Done"
+            android:layout_marginTop="8dp"/>
+    </LinearLayout>
+</ScrollView>
+

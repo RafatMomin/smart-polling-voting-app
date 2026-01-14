@@ -1,0 +1,156 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > HuggingFaceTokenizerClass</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.AI.util</a>
+</div>
+
+<h1>Coverage Summary for Class: HuggingFaceTokenizerClass (onetoone.AI.util)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">HuggingFaceTokenizerClass</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    40%
+  </span>
+  <span class="absValue">
+    (2/5)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/4)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    41.7%
+  </span>
+  <span class="absValue">
+    (5/12)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;// src/main/java/onetoone/AI/util/HuggingFaceTokenizer.java
+&nbsp;package onetoone.AI.util;
+&nbsp;
+&nbsp;import ai.djl.huggingface.tokenizers.HuggingFaceTokenizer;
+&nbsp;import ai.onnxruntime.OrtException;
+&nbsp;import org.slf4j.Logger;
+&nbsp;import org.slf4j.LoggerFactory;
+&nbsp;
+&nbsp;public class HuggingFaceTokenizerClass {
+<b class="fc">&nbsp;    private static final Logger log = LoggerFactory.getLogger(HuggingFaceTokenizer.class);</b>
+&nbsp;
+&nbsp;    private final HuggingFaceTokenizer tokenizer;
+&nbsp;    private static final String MODEL_NAME = &quot;sentence-transformers/all-MiniLM-L6-v2&quot;;
+&nbsp;
+<b class="fc">&nbsp;    public HuggingFaceTokenizerClass() throws Exception {</b>
+&nbsp;        try {
+<b class="fc">&nbsp;            log.info(&quot;Downloading/loading tokenizer for: {}&quot;, MODEL_NAME);</b>
+<b class="fc">&nbsp;            this.tokenizer = HuggingFaceTokenizer.newInstance(MODEL_NAME);</b>
+<b class="fc">&nbsp;            log.info(&quot;Tokenizer loaded successfully from Hugging Face Hub&quot;);</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            log.error(&quot;Failed to load tokenizer from Hugging Face&quot;, e);</b>
+&nbsp;            throw e;
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public long[] encode(String text) throws OrtException {
+<b class="nc">&nbsp;        if (tokenizer == null) throw new OrtException(&quot;Tokenizer not initialized&quot;);</b>
+<b class="nc">&nbsp;        return tokenizer.encode(text.trim()).getIds();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public long[] getAttentionMask(String text) throws OrtException {
+<b class="nc">&nbsp;        if (tokenizer == null) return new long[0];</b>
+<b class="nc">&nbsp;        return tokenizer.encode(text.trim()).getAttentionMask();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public long[] getTokenTypeIds(String text) throws OrtException {
+<b class="nc">&nbsp;        long[] ids = encode(text);</b>
+<b class="nc">&nbsp;        return new long[ids.length]; // all 0s for single sentence</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

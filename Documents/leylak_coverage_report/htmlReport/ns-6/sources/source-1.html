@@ -1,0 +1,192 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > DashboardController</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.Dashboard.controller</a>
+</div>
+
+<h1>Coverage Summary for Class: DashboardController (onetoone.Dashboard.controller)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">DashboardController</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    33.3%
+  </span>
+  <span class="absValue">
+    (2/6)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    12.5%
+  </span>
+  <span class="absValue">
+    (1/8)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    27.3%
+  </span>
+  <span class="absValue">
+    (6/22)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.Dashboard.controller;
+&nbsp;
+&nbsp;import onetoone.Dashboard.service.DashboardService;
+&nbsp;import onetoone.Users.model.Users;
+&nbsp;import onetoone.Dashboard.dto.RecentActivity;
+&nbsp;import org.springframework.beans.factory.annotation.Autowired;
+&nbsp;import org.springframework.web.bind.annotation.GetMapping;
+&nbsp;import org.springframework.web.bind.annotation.RequestHeader;
+&nbsp;import org.springframework.web.bind.annotation.RequestMapping;
+&nbsp;import org.springframework.web.bind.annotation.RestController;
+&nbsp;
+&nbsp;import java.util.HashMap;
+&nbsp;import java.util.List;
+&nbsp;import java.util.Map;
+&nbsp;
+&nbsp;@RestController
+&nbsp;@RequestMapping(&quot;/dashboard&quot;)
+<b class="fc">&nbsp;public class DashboardController {</b>
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private DashboardService dashboardService;
+&nbsp;
+&nbsp;    // helper method for an invalid token reponse
+&nbsp;    private Map&lt;String, Object&gt; invalidToken() {
+<b class="nc">&nbsp;        Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;        map.put(&quot;error&quot;, &quot;Invalid or expired token&quot;);</b>
+<b class="nc">&nbsp;        return map;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    //total polls joined by a user
+&nbsp;    @GetMapping(&quot;/polls-joined&quot;)
+&nbsp;    public Object getTotalPollsJoined(@RequestHeader(&quot;Authorization&quot;) String token) {
+&nbsp;
+<b class="fc">&nbsp;        Users user = dashboardService.getUserFromToken(token);</b>
+<b class="pc">&nbsp;        if (user == null) return invalidToken();</b>
+&nbsp;
+<b class="fc">&nbsp;        Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();</b>
+<b class="fc">&nbsp;        map.put(&quot;count_polls_joined&quot;, dashboardService.getTotalPollsJoined(user.getEmailId()));</b>
+<b class="fc">&nbsp;        return map;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // total votes cast by a user
+&nbsp;    @GetMapping(&quot;/votes-cast&quot;)
+&nbsp;    public Object getTotalVotesCast(@RequestHeader(&quot;Authorization&quot;) String token) {
+&nbsp;
+<b class="nc">&nbsp;        Users user = dashboardService.getUserFromToken(token);</b>
+<b class="nc">&nbsp;        if (user == null) return invalidToken();</b>
+&nbsp;
+<b class="nc">&nbsp;        Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;        map.put(&quot;count_votes_cast&quot;, dashboardService.getTotalVotesCast(user.getEmailId()));</b>
+<b class="nc">&nbsp;        return map;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // poll types a user has joined
+&nbsp;    @GetMapping(&quot;/poll-types&quot;)
+&nbsp;    public Object getPollTypeBreakdown(@RequestHeader(&quot;Authorization&quot;) String token) {
+&nbsp;
+<b class="nc">&nbsp;        Users user = dashboardService.getUserFromToken(token);</b>
+<b class="nc">&nbsp;        if (user == null) return invalidToken();</b>
+&nbsp;
+<b class="nc">&nbsp;        return dashboardService.getPollTypeBreakdown(user.getEmailId());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // recent activity
+&nbsp;    @GetMapping(&quot;/recent-activity&quot;)
+&nbsp;    public Object getRecentActivity(@RequestHeader(&quot;Authorization&quot;) String token) {
+&nbsp;
+<b class="nc">&nbsp;        Users user = dashboardService.getUserFromToken(token);</b>
+<b class="nc">&nbsp;        if (user == null) return invalidToken();</b>
+&nbsp;
+<b class="nc">&nbsp;        List&lt;RecentActivity&gt; items =</b>
+<b class="nc">&nbsp;                dashboardService.getRecentActivity(user.getEmailId());</b>
+&nbsp;
+<b class="nc">&nbsp;        return items;</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

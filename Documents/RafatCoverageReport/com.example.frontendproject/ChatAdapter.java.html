@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ChatAdapter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debug</a> &gt; <a href="index.source.html" class="el_package">com.example.frontendproject</a> &gt; <span class="el_source">ChatAdapter.java</span></div><h1>ChatAdapter.java</h1><pre class="source lang-java linenums">package com.example.frontendproject;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
+import java.util.ArrayList;
+import java.util.List;
+
+
+<span class="fc" id="L15">public class ChatAdapter extends RecyclerView.Adapter&lt;RecyclerView.ViewHolder&gt; {</span>
+
+    private static final int VIEW_USER = 1;
+    private static final int VIEW_BOT  = 2;
+
+<span class="fc" id="L20">    private final List&lt;ChatMessage&gt; items = new ArrayList&lt;&gt;();</span>
+
+    public void setMessages(List&lt;ChatMessage&gt; msgs) {
+<span class="fc" id="L23">        items.clear();</span>
+<span class="fc" id="L24">        items.addAll(msgs);</span>
+<span class="fc" id="L25">        notifyDataSetChanged();</span>
+<span class="fc" id="L26">    }</span>
+
+    public List&lt;ChatMessage&gt; getItems() {
+<span class="fc" id="L29">        return items;</span>
+    }
+
+    public void addUserMessage(String text) {
+<span class="fc" id="L33">        items.add(new ChatMessage(ChatMessage.ROLE_USER, text));</span>
+<span class="fc" id="L34">        notifyItemInserted(items.size() - 1);</span>
+<span class="fc" id="L35">    }</span>
+
+    public void addBotMessage(String text) {
+<span class="fc" id="L38">        items.add(new ChatMessage(ChatMessage.ROLE_BOT, text));</span>
+<span class="fc" id="L39">        notifyItemInserted(items.size() - 1);</span>
+<span class="fc" id="L40">    }</span>
+
+    public void addTypingIndicator() {
+<span class="fc" id="L43">        items.add(new ChatMessage(ChatMessage.ROLE_BOT, &quot;…&quot;));</span>
+<span class="fc" id="L44">        notifyItemInserted(items.size() - 1);</span>
+<span class="fc" id="L45">    }</span>
+
+    public void updateLastBotMessage(String text) {
+<span class="fc" id="L48">        int last = items.size() - 1;</span>
+<span class="pc bpc" id="L49" title="2 of 6 branches missed.">        if (last &gt;= 0 &amp;&amp; items.get(last).getRole() == ChatMessage.ROLE_BOT &amp;&amp; &quot;…&quot;.equals(items.get(last).getText())) {</span>
+<span class="fc" id="L50">            items.set(last, new ChatMessage(ChatMessage.ROLE_BOT, text));</span>
+<span class="fc" id="L51">            notifyItemChanged(last);</span>
+        } else {
+<span class="fc" id="L53">            addBotMessage(text);</span>
+        }
+<span class="fc" id="L55">    }</span>
+
+    @Override
+    public int getItemViewType(int position) {
+<span class="fc bfc" id="L59" title="All 2 branches covered.">        return items.get(position).getRole() == ChatMessage.ROLE_USER ? VIEW_USER : VIEW_BOT;</span>
+    }
+
+    @NonNull
+    @Override
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+<span class="fc" id="L65">        LayoutInflater inf = LayoutInflater.from(parent.getContext());</span>
+        View v;
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        if (viewType == VIEW_USER) {</span>
+<span class="fc" id="L68">            v = inf.inflate(R.layout.item_message_user, parent, false);</span>
+<span class="fc" id="L69">            return new UserVH(v);</span>
+        } else {
+<span class="fc" id="L71">            v = inf.inflate(R.layout.item_message_bot, parent, false);</span>
+<span class="fc" id="L72">            return new BotVH(v);</span>
+        }
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+<span class="fc" id="L78">        String text = items.get(position).getText();</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        if (holder instanceof UserVH) ((UserVH) holder).tv.setText(text);</span>
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">        else if (holder instanceof BotVH) ((BotVH) holder).tv.setText(text);</span>
+<span class="fc" id="L81">    }</span>
+
+    @Override
+    public int getItemCount() {
+<span class="fc" id="L85">        return items.size();</span>
+    }
+
+    static class UserVH extends RecyclerView.ViewHolder {
+        TextView tv;
+        UserVH(@NonNull View itemView) {
+<span class="fc" id="L91">            super(itemView);</span>
+<span class="fc" id="L92">            tv = itemView.findViewById(R.id.tvText);</span>
+<span class="fc" id="L93">        }</span>
+    }
+
+    static class BotVH extends RecyclerView.ViewHolder {
+        TextView tv;
+        BotVH(@NonNull View itemView) {
+<span class="fc" id="L99">            super(itemView);</span>
+<span class="fc" id="L100">            tv = itemView.findViewById(R.id.tvText);</span>
+<span class="fc" id="L101">        }</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span>Generated by the Android Gradle plugin 8.13.1</div></body></html>

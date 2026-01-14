@@ -1,0 +1,140 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > VoteRepository</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.Polling.repository</a>
+</div>
+
+<h1>Coverage Summary for Class: VoteRepository (onetoone.Polling.repository)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+</tr>
+<tr>
+  <td class="name">VoteRepository</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.Polling.repository;
+&nbsp;
+&nbsp;import onetoone.Polling.model.Vote;
+&nbsp;import org.springframework.data.jpa.repository.JpaRepository;
+&nbsp;import org.springframework.data.jpa.repository.Query;
+&nbsp;import org.springframework.data.repository.query.Param;
+&nbsp;import org.springframework.stereotype.Repository;
+&nbsp;
+&nbsp;import java.util.List;
+&nbsp;
+&nbsp;@Repository
+&nbsp;public interface VoteRepository extends JpaRepository&lt;Vote, Long&gt; {
+&nbsp;
+&nbsp;    // Generic counts
+&nbsp;    @Query(&quot;SELECT COUNT(v) FROM Vote v WHERE v.poll.id = :pollId&quot;)
+&nbsp;    long countTotalByPoll(@Param(&quot;pollId&quot;) Long pollId);
+&nbsp;
+&nbsp;    // Yes/No using numericValue = 1 (yes) or 0 (no)
+&nbsp;    @Query(&quot;SELECT COUNT(v) FROM Vote v WHERE v.poll.id = :pollId AND v.numericValue = 1&quot;)
+&nbsp;    long countYes(@Param(&quot;pollId&quot;) Long pollId);
+&nbsp;
+&nbsp;    @Query(&quot;SELECT COUNT(v) FROM Vote v WHERE v.poll.id = :pollId AND v.numericValue = 0&quot;)
+&nbsp;    long countNo(@Param(&quot;pollId&quot;) Long pollId);
+&nbsp;
+&nbsp;    // Rating (numericValue)
+&nbsp;    @Query(&quot;SELECT AVG(v.numericValue) FROM Vote v WHERE v.poll.id = :pollId&quot;)
+&nbsp;    Double averageNumeric(@Param(&quot;pollId&quot;) Long pollId);
+&nbsp;
+&nbsp;    @Query(&quot;SELECT MAX(v.numericValue) FROM Vote v WHERE v.poll.id = :pollId&quot;)
+&nbsp;    Integer maxNumeric(@Param(&quot;pollId&quot;) Long pollId);
+&nbsp;
+&nbsp;    // Multiple choice: returns rows of (choice, count)
+&nbsp;    @Query(&quot;SELECT v.choice, COUNT(v) FROM Vote v WHERE v.poll.id = :pollId GROUP BY v.choice&quot;)
+&nbsp;    List&lt;Object[]&gt; countChoices(@Param(&quot;pollId&quot;) Long pollId);
+&nbsp;
+&nbsp;    // Ranking: Borda-like scoring: SUM(totalOptions - v.rank + 1) grouped by choice
+&nbsp;    // Note: JPQL supports arithmetic expressions with parameters in SUM
+&nbsp;    @Query(&quot;SELECT v.choice, SUM(:totalOptions - v.rank + 1) FROM Vote v WHERE v.poll.id = :pollId GROUP BY v.choice ORDER BY SUM(:totalOptions - v.rank + 1) DESC&quot;)
+&nbsp;    List&lt;Object[]&gt; rankingScores(@Param(&quot;pollId&quot;) Long pollId, @Param(&quot;totalOptions&quot;) int totalOptions);
+&nbsp;
+&nbsp;    // find a single user&#39;s vote for a poll
+&nbsp;    @Query(&quot;SELECT v FROM Vote v WHERE v.poll.id = :pollId AND LOWER(v.userId) = LOWER(:userId)&quot;)
+&nbsp;    Vote findByPollAndUser(@Param(&quot;pollId&quot;) Long pollId, @Param(&quot;userId&quot;) String userId);
+&nbsp;
+&nbsp;    // optional: find all votes for a poll (careful for large polls)
+&nbsp;    @Query(&quot;SELECT v FROM Vote v WHERE v.poll.id = :pollId&quot;)
+&nbsp;    List&lt;Vote&gt; findAllByPoll(@Param(&quot;pollId&quot;) Long pollId);
+&nbsp;
+&nbsp;    // Single-vote method (existing)
+&nbsp;    @Query(&quot;SELECT v FROM Vote v WHERE v.poll.id = :pollId AND LOWER(v.userId) = LOWER(:userId)&quot;)
+&nbsp;    Vote findSingleByPollAndUser(@Param(&quot;pollId&quot;) Long pollId, @Param(&quot;userId&quot;) String userId);
+&nbsp;
+&nbsp;    // Multi-vote method for ranking polls
+&nbsp;    @Query(&quot;SELECT v FROM Vote v WHERE v.poll.id = :pollId AND LOWER(v.userId) = LOWER(:userId)&quot;)
+&nbsp;    List&lt;Vote&gt; findAllByPollAndUser(@Param(&quot;pollId&quot;) Long pollId, @Param(&quot;userId&quot;) String userId);
+&nbsp;
+&nbsp;    // rating polls: count votes numerically
+&nbsp;    @Query(&quot;SELECT COUNT(v) FROM Vote v WHERE v.poll.id = :pollId AND v.numericValue = :rating&quot;)
+&nbsp;    long countByNumericValue(@Param(&quot;pollId&quot;) Long pollId, @Param(&quot;rating&quot;) int rating);
+&nbsp;
+&nbsp;    // ranking polls: count distinct users who voted
+&nbsp;    @Query(&quot;SELECT COUNT(DISTINCT v.userId) FROM Vote v WHERE v.poll.id = :pollId&quot;)
+&nbsp;    long countDistinctUsersByPoll(@Param(&quot;pollId&quot;) Long pollId);
+&nbsp;
+&nbsp;    // total votes casted by a user
+&nbsp;    @Query(&quot;SELECT COUNT(v) FROM Vote v WHERE LOWER(v.userId) = LOWER(:userId)&quot;)
+&nbsp;    long countTotalByUser(@Param(&quot;userId&quot;) String userId);
+&nbsp;
+&nbsp;    // last 5 votes from a user
+&nbsp;    List&lt;Vote&gt; findTop5ByUserIdOrderByTimestampDesc(String userId);
+&nbsp;
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,424 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > PollingWindowService</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.PollingWindow.service</a>
+</div>
+
+<h1>Coverage Summary for Class: PollingWindowService (onetoone.PollingWindow.service)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">PollingWindowService</td>
+<td class="coverageStat">
+  <span class="percent">
+    8.3%
+  </span>
+  <span class="absValue">
+    (1/12)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/50)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    1.1%
+  </span>
+  <span class="absValue">
+    (1/93)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">PollingWindowService$$SpringCGLIB$$0</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    8.3%
+  </span>
+  <span class="absValue">
+    (1/12)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/50)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    1.1%
+  </span>
+  <span class="absValue">
+    (1/93)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.PollingWindow.service;
+&nbsp;
+&nbsp;import onetoone.PollingWindow.model.Group;
+&nbsp;import onetoone.PollingWindow.model.PollingWindow;
+&nbsp;import onetoone.PollingWindow.repository.GroupRepository;
+&nbsp;import onetoone.PollingWindow.repository.PollingWindowRepository;
+&nbsp;import onetoone.Polling.model.Poll;
+&nbsp;import onetoone.Polling.repository.PollRepository;
+&nbsp;import onetoone.Users.model.Users;
+&nbsp;import onetoone.Users.repository.UserRepository;
+&nbsp;import org.springframework.beans.factory.annotation.Autowired;
+&nbsp;import org.springframework.stereotype.Service;
+&nbsp;import org.springframework.transaction.annotation.Transactional;
+&nbsp;import org.hibernate.Hibernate;
+&nbsp;
+&nbsp;import java.time.LocalDateTime;
+&nbsp;import java.util.List;
+&nbsp;import java.util.NoSuchElementException;
+&nbsp;import java.util.Optional;
+&nbsp;import java.util.Set;
+&nbsp;
+&nbsp;@Service
+<b class="fc">&nbsp;public class PollingWindowService {</b>
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private PollingWindowRepository pollingWindowRepository;
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private PollRepository pollRepository;
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private GroupRepository groupRepository;
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private UserRepository userRepository;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Create a new polling window for a poll
+&nbsp;     */
+&nbsp;    @Transactional
+&nbsp;    public PollingWindow createPollingWindow(
+&nbsp;            Long pollId,
+&nbsp;            String windowName,
+&nbsp;            String creatorEmail,
+&nbsp;            LocalDateTime startTime,
+&nbsp;            LocalDateTime endTime,
+&nbsp;            Set&lt;Long&gt; groupIds,
+&nbsp;            Set&lt;String&gt; individualUserEmails) {
+&nbsp;
+<b class="nc">&nbsp;        Poll poll = pollRepository.findById(pollId)</b>
+<b class="nc">&nbsp;                .orElseThrow(() -&gt; new NoSuchElementException(&quot;Poll not found&quot;));</b>
+&nbsp;
+<b class="nc">&nbsp;        Users creator = userRepository.findByEmailId(creatorEmail);</b>
+<b class="nc">&nbsp;        if (creator == null) {</b>
+<b class="nc">&nbsp;            throw new IllegalArgumentException(&quot;Creator user not found: &quot; + creatorEmail);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        PollingWindow window = new PollingWindow(poll, windowName, creator);</b>
+&nbsp;
+<b class="nc">&nbsp;        if (startTime != null) {</b>
+<b class="nc">&nbsp;            window.setStartTime(startTime);</b>
+&nbsp;        }
+<b class="nc">&nbsp;        if (endTime != null) {</b>
+<b class="nc">&nbsp;            window.setEndTime(endTime);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Add target groups
+<b class="nc">&nbsp;        if (groupIds != null &amp;&amp; !groupIds.isEmpty()) {</b>
+<b class="nc">&nbsp;            for (Long groupId : groupIds) {</b>
+<b class="nc">&nbsp;                Group group = groupRepository.findById(groupId)</b>
+<b class="nc">&nbsp;                        .orElseThrow(() -&gt; new NoSuchElementException(&quot;Group not found: &quot; + groupId));</b>
+<b class="nc">&nbsp;                window.addTargetGroup(group);</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+&nbsp;        // Add individual users
+<b class="nc">&nbsp;        if (individualUserEmails != null &amp;&amp; !individualUserEmails.isEmpty()) {</b>
+<b class="nc">&nbsp;            for (String email : individualUserEmails) {</b>
+<b class="nc">&nbsp;                Users user = userRepository.findByEmailId(email);</b>
+<b class="nc">&nbsp;                if (user == null) {</b>
+<b class="nc">&nbsp;                    throw new IllegalArgumentException(&quot;User not found: &quot; + email);</b>
+&nbsp;                }
+<b class="nc">&nbsp;                window.addTargetUser(user);</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        PollingWindow savedWindow = pollingWindowRepository.save(window);</b>
+&nbsp;
+&nbsp;        // Initialize lazy collections before returning
+<b class="nc">&nbsp;        initializeWindow(savedWindow);</b>
+&nbsp;
+<b class="nc">&nbsp;        return savedWindow;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Open/activate a polling window
+&nbsp;     * Returns error message if cannot open (outside time window)
+&nbsp;     */
+&nbsp;    @Transactional
+&nbsp;    public PollingWindow openPollingWindow(Long windowId) {
+<b class="nc">&nbsp;        PollingWindow window = pollingWindowRepository.findById(windowId)</b>
+<b class="nc">&nbsp;                .orElseThrow(() -&gt; new NoSuchElementException(&quot;Polling window not found&quot;));</b>
+&nbsp;
+&nbsp;        // Check if within time boundaries
+<b class="nc">&nbsp;        if (!window.isWithinTimeWindow()) {</b>
+<b class="nc">&nbsp;            LocalDateTime now = LocalDateTime.now();</b>
+<b class="nc">&nbsp;            if (window.getStartTime() != null &amp;&amp; now.isBefore(window.getStartTime())) {</b>
+<b class="nc">&nbsp;                throw new IllegalStateException(</b>
+<b class="nc">&nbsp;                        &quot;Cannot open window before start time. Start time: &quot; + window.getStartTime()</b>
+&nbsp;                );
+&nbsp;            }
+<b class="nc">&nbsp;            if (window.getEndTime() != null &amp;&amp; now.isAfter(window.getEndTime())) {</b>
+<b class="nc">&nbsp;                throw new IllegalStateException(</b>
+<b class="nc">&nbsp;                        &quot;Cannot open window after end time. End time: &quot; + window.getEndTime()</b>
+&nbsp;                );
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+&nbsp;        // Close all other active windows for this poll
+<b class="nc">&nbsp;        List&lt;PollingWindow&gt; activeWindows = pollingWindowRepository</b>
+<b class="nc">&nbsp;                .findActiveWindowsByPollId(window.getPoll().getId());</b>
+<b class="nc">&nbsp;        for (PollingWindow activeWindow : activeWindows) {</b>
+<b class="nc">&nbsp;            if (!activeWindow.getId().equals(windowId)) {</b>
+&nbsp;                activeWindow.close();
+<b class="nc">&nbsp;                pollingWindowRepository.save(activeWindow);</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+&nbsp;        // Open this window using the model&#39;s open() method
+<b class="nc">&nbsp;        if (!window.open()) {</b>
+<b class="nc">&nbsp;            throw new IllegalStateException(&quot;Cannot open window: outside time boundaries&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        PollingWindow savedWindow = pollingWindowRepository.save(window);</b>
+&nbsp;
+&nbsp;        // Initialize lazy collections
+<b class="nc">&nbsp;        initializeWindow(savedWindow);</b>
+&nbsp;
+<b class="nc">&nbsp;        return savedWindow;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Force open a window (admin override - bypasses time restrictions)
+&nbsp;     */
+&nbsp;    @Transactional
+&nbsp;    public PollingWindow forceOpenPollingWindow(Long windowId) {
+<b class="nc">&nbsp;        PollingWindow window = pollingWindowRepository.findById(windowId)</b>
+<b class="nc">&nbsp;                .orElseThrow(() -&gt; new NoSuchElementException(&quot;Polling window not found&quot;));</b>
+&nbsp;
+&nbsp;        // Close all other active windows for this poll
+<b class="nc">&nbsp;        List&lt;PollingWindow&gt; activeWindows = pollingWindowRepository</b>
+<b class="nc">&nbsp;                .findActiveWindowsByPollId(window.getPoll().getId());</b>
+<b class="nc">&nbsp;        for (PollingWindow activeWindow : activeWindows) {</b>
+<b class="nc">&nbsp;            if (!activeWindow.getId().equals(windowId)) {</b>
+&nbsp;                activeWindow.close();
+<b class="nc">&nbsp;                pollingWindowRepository.save(activeWindow);</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+&nbsp;        // Force open this window (bypasses time checks)
+<b class="nc">&nbsp;        window.forceOpen();</b>
+<b class="nc">&nbsp;        PollingWindow savedWindow = pollingWindowRepository.save(window);</b>
+&nbsp;
+&nbsp;        // Initialize lazy collections
+<b class="nc">&nbsp;        initializeWindow(savedWindow);</b>
+&nbsp;
+<b class="nc">&nbsp;        return savedWindow;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Close a polling window
+&nbsp;     */
+&nbsp;    @Transactional
+&nbsp;    public PollingWindow closePollingWindow(Long windowId) {
+<b class="nc">&nbsp;        PollingWindow window = pollingWindowRepository.findById(windowId)</b>
+<b class="nc">&nbsp;                .orElseThrow(() -&gt; new NoSuchElementException(&quot;Polling window not found&quot;));</b>
+&nbsp;
+&nbsp;        window.close();
+<b class="nc">&nbsp;        PollingWindow savedWindow = pollingWindowRepository.save(window);</b>
+&nbsp;
+&nbsp;        // Initialize lazy collections
+<b class="nc">&nbsp;        initializeWindow(savedWindow);</b>
+&nbsp;
+<b class="nc">&nbsp;        return savedWindow;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Check if a user can vote on a poll (via any active window)
+&nbsp;     */
+&nbsp;    @Transactional(readOnly = true)
+&nbsp;    public boolean canUserVoteOnPoll(Long pollId, String userEmail) {
+<b class="nc">&nbsp;        List&lt;PollingWindow&gt; activeWindows = pollingWindowRepository.findActiveWindowsByPollId(pollId);</b>
+&nbsp;
+<b class="nc">&nbsp;        for (PollingWindow window : activeWindows) {</b>
+&nbsp;            // Initialize collections for checking
+<b class="nc">&nbsp;            Hibernate.initialize(window.getTargetGroups());</b>
+<b class="nc">&nbsp;            Hibernate.initialize(window.getTargetIndividualUsers());</b>
+&nbsp;
+<b class="nc">&nbsp;            if (window.canUserVote(userEmail)) {</b>
+<b class="nc">&nbsp;                return true;</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return false;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get the currently active window for a poll
+&nbsp;     */
+&nbsp;    @Transactional(readOnly = true)
+&nbsp;    public Optional&lt;PollingWindow&gt; getCurrentActiveWindow(Long pollId) {
+<b class="nc">&nbsp;        Optional&lt;PollingWindow&gt; window = pollingWindowRepository.findCurrentActiveWindow(pollId);</b>
+<b class="nc">&nbsp;        window.ifPresent(this::initializeWindow);</b>
+<b class="nc">&nbsp;        return window;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get all windows for a poll
+&nbsp;     */
+&nbsp;    @Transactional(readOnly = true)
+&nbsp;    public List&lt;PollingWindow&gt; getWindowsForPoll(Long pollId) {
+<b class="nc">&nbsp;        List&lt;PollingWindow&gt; windows = pollingWindowRepository.findByPollId(pollId);</b>
+<b class="nc">&nbsp;        windows.forEach(this::initializeWindow);</b>
+<b class="nc">&nbsp;        return windows;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get a specific window
+&nbsp;     */
+&nbsp;    @Transactional(readOnly = true)
+&nbsp;    public PollingWindow getWindowById(Long windowId) {
+<b class="nc">&nbsp;        PollingWindow window = pollingWindowRepository.findById(windowId)</b>
+<b class="nc">&nbsp;                .orElseThrow(() -&gt; new NoSuchElementException(&quot;Polling window not found&quot;));</b>
+<b class="nc">&nbsp;        initializeWindow(window);</b>
+<b class="nc">&nbsp;        return window;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Update window end time
+&nbsp;     * If window is currently open and new end time has passed, it will auto-close
+&nbsp;     */
+&nbsp;    @Transactional
+&nbsp;    public PollingWindow updateWindowEndTime(Long windowId, LocalDateTime newEndTime) {
+<b class="nc">&nbsp;        PollingWindow window = pollingWindowRepository.findById(windowId)</b>
+<b class="nc">&nbsp;                .orElseThrow(() -&gt; new NoSuchElementException(&quot;Polling window not found&quot;));</b>
+&nbsp;
+<b class="nc">&nbsp;        window.setEndTime(newEndTime);</b>
+&nbsp;
+&nbsp;        // If window is active but new end time has passed, close it
+<b class="nc">&nbsp;        if (window.isActive() &amp;&amp; !window.isWithinTimeWindow()) {</b>
+&nbsp;            window.close();
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        PollingWindow savedWindow = pollingWindowRepository.save(window);</b>
+&nbsp;
+&nbsp;        // Initialize lazy collections
+<b class="nc">&nbsp;        initializeWindow(savedWindow);</b>
+&nbsp;
+<b class="nc">&nbsp;        return savedWindow;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Delete a polling window
+&nbsp;     */
+&nbsp;    @Transactional
+&nbsp;    public void deletePollingWindow(Long windowId) {
+<b class="nc">&nbsp;        pollingWindowRepository.deleteById(windowId);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Helper method to initialize lazy-loaded collections
+&nbsp;     */
+&nbsp;    private void initializeWindow(PollingWindow window) {
+&nbsp;        // Initialize poll
+<b class="nc">&nbsp;        Hibernate.initialize(window.getPoll());</b>
+&nbsp;
+&nbsp;        // Initialize creator
+<b class="nc">&nbsp;        Hibernate.initialize(window.getCreator());</b>
+&nbsp;
+&nbsp;        // Initialize target groups and their members
+<b class="nc">&nbsp;        Hibernate.initialize(window.getTargetGroups());</b>
+<b class="nc">&nbsp;        for (Group group : window.getTargetGroups()) {</b>
+<b class="nc">&nbsp;            Hibernate.initialize(group.getMembers());</b>
+<b class="nc">&nbsp;            Hibernate.initialize(group.getCreator());</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Initialize individual target users
+<b class="nc">&nbsp;        Hibernate.initialize(window.getTargetIndividualUsers());</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

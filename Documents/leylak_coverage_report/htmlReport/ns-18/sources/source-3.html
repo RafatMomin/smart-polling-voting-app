@@ -1,0 +1,188 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > PollMember</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.Polling.model</a>
+</div>
+
+<h1>Coverage Summary for Class: PollMember (onetoone.Polling.model)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">PollMember</td>
+<td class="coverageStat">
+  <span class="percent">
+    9.1%
+  </span>
+  <span class="absValue">
+    (1/11)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    7.7%
+  </span>
+  <span class="absValue">
+    (1/13)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">PollMember$HibernateInstantiator$EMQYFefr</td>
+  </tr>
+  <tr>
+    <td class="name">PollMember$HibernateProxy$iM9zeiRq</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    9.1%
+  </span>
+  <span class="absValue">
+    (1/11)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    7.7%
+  </span>
+  <span class="absValue">
+    (1/13)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.Polling.model;
+&nbsp;
+&nbsp;import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+&nbsp;import jakarta.persistence.*;
+&nbsp;import onetoone.Users.model.Users;
+&nbsp;
+&nbsp;import java.time.LocalDateTime;
+&nbsp;
+&nbsp;@Entity
+&nbsp;@Table(name = &quot;poll_members&quot;, uniqueConstraints = {
+&nbsp;    @UniqueConstraint(columnNames = {&quot;pollId&quot;, &quot;emailId&quot;})
+&nbsp;})
+&nbsp;public class PollMember {
+&nbsp;
+&nbsp;    @Id
+&nbsp;    @GeneratedValue(strategy = GenerationType.IDENTITY)
+&nbsp;    private Long id;
+&nbsp;
+&nbsp;    @ManyToOne(fetch = FetchType.LAZY)
+&nbsp;    @JoinColumn(name = &quot;pollId&quot;, nullable = false)
+&nbsp;    @JsonIgnoreProperties({&quot;hibernateLazyInitializer&quot;, &quot;handler&quot;})
+&nbsp;    private Poll poll;
+&nbsp;
+&nbsp;    @ManyToOne(fetch = FetchType.LAZY)
+&nbsp;    @JoinColumn(name = &quot;emailId&quot;, referencedColumnName = &quot;emailId&quot;, nullable = false)
+&nbsp;    @JsonIgnoreProperties({&quot;hibernateLazyInitializer&quot;, &quot;handler&quot;})
+&nbsp;    private Users user;
+&nbsp;
+&nbsp;    private LocalDateTime joinedAt;
+&nbsp;
+<b class="fc">&nbsp;    public PollMember() {}</b>
+&nbsp;
+<b class="nc">&nbsp;    public PollMember(Poll poll, Users user) {</b>
+<b class="nc">&nbsp;        this.poll = poll;</b>
+<b class="nc">&nbsp;        this.user = user;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @PrePersist
+&nbsp;    protected void onCreate() {
+<b class="nc">&nbsp;        this.joinedAt = LocalDateTime.now();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // getters and setters
+&nbsp;    public Long getId() {
+<b class="nc">&nbsp;        return id;</b>
+&nbsp;    }
+&nbsp;    public void setId(Long id) {
+<b class="nc">&nbsp;        this.id = id;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Poll getPoll() {
+<b class="nc">&nbsp;        return poll;</b>
+&nbsp;    }
+&nbsp;    public void setPoll(Poll poll) {
+<b class="nc">&nbsp;        this.poll = poll;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Users getUser() {
+<b class="nc">&nbsp;        return user;</b>
+&nbsp;    }
+&nbsp;    public void setUser(Users user) {
+<b class="nc">&nbsp;        this.user = user;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public LocalDateTime getJoinedAt() {
+<b class="nc">&nbsp;        return joinedAt;</b>
+&nbsp;    }
+&nbsp;    public void setJoinedAt(LocalDateTime joinedAt) {
+<b class="nc">&nbsp;        this.joinedAt = joinedAt;</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

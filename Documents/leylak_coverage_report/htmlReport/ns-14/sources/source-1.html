@@ -1,0 +1,154 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > EligibilityRequest</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.Location.dto</a>
+</div>
+
+<h1>Coverage Summary for Class: EligibilityRequest (onetoone.Location.dto)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">EligibilityRequest</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/9)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/13)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.Location.dto;
+&nbsp;
+&nbsp;import java.time.ZonedDateTime;
+&nbsp;import java.time.format.DateTimeFormatter;
+&nbsp;
+&nbsp;public class EligibilityRequest {
+&nbsp;    private boolean eligible;
+&nbsp;    private double distanceMeters;
+&nbsp;    private String rule;
+&nbsp;    private String serverTime;
+&nbsp;
+<b class="nc">&nbsp;    public EligibilityRequest(boolean eligible, double distanceMeters, String rule) {</b>
+<b class="nc">&nbsp;        this.eligible = eligible;</b>
+<b class="nc">&nbsp;        this.distanceMeters = distanceMeters;</b>
+<b class="nc">&nbsp;        this.rule = rule;</b>
+<b class="nc">&nbsp;        this.serverTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT); // Zulu time (UTC) for cleaner timestamps</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public boolean isEligible() {
+<b class="nc">&nbsp;        return eligible;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setEligible(boolean eligible) {
+<b class="nc">&nbsp;        this.eligible = eligible;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public double getDistanceMeters() {
+<b class="nc">&nbsp;        return distanceMeters;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setDistanceMeters(double distanceMeters) {
+<b class="nc">&nbsp;        this.distanceMeters = distanceMeters;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getRule() {
+<b class="nc">&nbsp;        return rule;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setRule(String rule) {
+<b class="nc">&nbsp;        this.rule = rule;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getServerTime() {
+<b class="nc">&nbsp;        return serverTime;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setServerTime(String serverTime) {
+<b class="nc">&nbsp;        this.serverTime = serverTime;</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,9 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="Base.Theme.FrontendProject" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- No background overridden -->
+    </style>
+
+    <style name="Theme.FrontendProject" parent="Base.Theme.FrontendProject" />
+
+</resources>

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MainActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debug</a> &gt; <a href="index.source.html" class="el_package">com.example.frontendproject</a> &gt; <span class="el_source">MainActivity.java</span></div><h1>MainActivity.java</h1><pre class="source lang-java linenums">package com.example.frontendproject;
+
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.VideoView;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import android.view.GestureDetector;
+import android.view.MotionEvent;
+
+<span class="nc" id="L14">public class MainActivity extends AppCompatActivity {</span>
+
+    private View splash;         // we'll use the root content view
+    private VideoView introVideo;
+
+    // Added: gesture detector for a simple double-tap dev shortcut to ChatActivity
+    private GestureDetector gestureDetector;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="nc" id="L24">        super.onCreate(savedInstanceState);</span>
+<span class="nc" id="L25">        setContentView(R.layout.activity_main); // your ScrollView + VideoView layout</span>
+
+        // Use the root content view as the thing we fade out
+<span class="nc" id="L28">        splash = findViewById(android.R.id.content);</span>
+
+        // Your VideoView id in XML is heroVideo (not introVideo)
+<span class="nc" id="L31">        introVideo = findViewById(R.id.heroVideo);</span>
+
+        // If you have res/raw/intro.mp4, this will play it. If not, comment these 3 lines.
+<span class="nc" id="L34">        Uri videoUri = Uri.parse(&quot;android.resource://&quot; + getPackageName() + &quot;/&quot; + R.raw.intro);</span>
+<span class="nc" id="L35">        introVideo.setVideoURI(videoUri);</span>
+
+<span class="nc" id="L37">        introVideo.setOnPreparedListener(mp -&gt; {</span>
+<span class="nc" id="L38">            try { mp.setVolume(0f, 0f); } catch (Exception ignored) {}</span>
+<span class="nc" id="L39">            introVideo.start();</span>
+<span class="nc" id="L40">        });</span>
+
+<span class="nc" id="L42">        introVideo.setOnCompletionListener(mp -&gt; goNextWithFade());</span>
+<span class="nc" id="L43">        introVideo.setOnErrorListener((mp, what, extra) -&gt; {</span>
+<span class="nc" id="L44">            goNextWithFade();</span>
+<span class="nc" id="L45">            return true;</span>
+        });
+
+        // === DEV SHORTCUT #1 (existing): Long-press to open ResultsActivity ===
+<span class="nc" id="L49">        introVideo.setOnLongClickListener(v -&gt; {</span>
+<span class="nc" id="L50">            Intent test = new Intent(this, ResultsActivity.class);</span>
+            // ResultsActivity expects these extras:
+            //   - pollId (int)
+            //   - title  (String)
+            //   - type   (String) -&gt; &quot;YES_NO&quot; | &quot;MULTIPLE_CHOICE&quot; | &quot;RATING&quot; | &quot;RANKING&quot;
+<span class="nc" id="L55">            test.putExtra(&quot;pollId&quot;, 123);                // TODO: replace with a real pollId</span>
+<span class="nc" id="L56">            test.putExtra(&quot;title&quot;, &quot;Demo Poll&quot;);         // optional, for header display</span>
+<span class="nc" id="L57">            test.putExtra(&quot;type&quot;, &quot;YES_NO&quot;);             // adjust if you want to test other types</span>
+<span class="nc" id="L58">            startActivity(test);</span>
+<span class="nc" id="L59">            return true;</span>
+        });
+
+        // === DEV SHORTCUT #2 (new): Double-tap the video to open ChatActivity ===
+<span class="nc" id="L63">        gestureDetector = new GestureDetector(this,</span>
+<span class="nc" id="L64">                new GestureDetector.SimpleOnGestureListener() {</span>
+                    @Override
+                    public boolean onDoubleTap(MotionEvent e) {
+<span class="nc" id="L67">                        startActivity(new Intent(MainActivity.this, ChatActivity.class));</span>
+<span class="nc" id="L68">                        return true;</span>
+                    }
+                });
+
+        // Pass touch events to the gesture detector without breaking video controls
+<span class="nc" id="L73">        introVideo.setOnTouchListener((v, event) -&gt; {</span>
+<span class="nc" id="L74">            gestureDetector.onTouchEvent(event);</span>
+<span class="nc" id="L75">            return false; // don't consume; allow normal VideoView behavior</span>
+        });
+<span class="nc" id="L77">    }</span>
+
+    private void goNextWithFade() {
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        if (splash != null) {</span>
+<span class="nc" id="L81">            splash.animate()</span>
+<span class="nc" id="L82">                    .alpha(0f)</span>
+<span class="nc" id="L83">                    .setDuration(250)</span>
+<span class="nc" id="L84">                    .withEndAction(this::routeToNext)</span>
+<span class="nc" id="L85">                    .start();</span>
+        } else {
+<span class="nc" id="L87">            routeToNext();</span>
+        }
+<span class="nc" id="L89">    }</span>
+
+    private void routeToNext() {
+        // If logged in -&gt; Profile, else -&gt; Login
+<span class="nc" id="L93">        SessionManager session = new SessionManager(this);</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">        Intent i = session.isLoggedIn()</span>
+<span class="nc" id="L95">                ? new Intent(this, ProfileActivity.class)</span>
+<span class="nc" id="L96">                : new Intent(this, LoginActivity.class);</span>
+<span class="nc" id="L97">        startActivity(i);</span>
+<span class="nc" id="L98">        finish();</span>
+<span class="nc" id="L99">    }</span>
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span>Generated by the Android Gradle plugin 8.13.1</div></body></html>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow HTTP (non-HTTPS) traffic during development -->
+    <base-config cleartextTrafficPermitted="true" />
+    <!-- For production, consider restricting to your domain:
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">coms-3090-036.class.las.iastate.edu</domain>
+    </domain-config>
+    -->
+</network-security-config>

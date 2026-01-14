@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F4F0FA">
+
+    <!-- Toolbar -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbarResults"
+        android:layout_width="0dp"
+        android:layout_height="?attr/actionBarSize"
+        android:background="#6366F1"
+        app:title="Poll Results"
+        app:titleCentered="true"
+        app:titleTextColor="@android:color/white"
+        app:navigationIconTint="@android:color/white"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Scrollable content -->
+    <ScrollView
+        android:id="@+id/scroll"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:padding="16dp"
+        android:fillViewport="true"
+        app:layout_constraintTop_toBottomOf="@id/toolbarResults"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Card container -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@android:color/white">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <!-- Status + meta -->
+                <TextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Connecting..."
+                    android:textStyle="bold"
+                    android:textSize="16sp"
+                    android:textColor="#111827"
+                    android:padding="4dp" />
+
+                <TextView
+                    android:id="@+id/tvMeta"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Total: 0 • Status: —"
+                    android:textSize="14sp"
+                    android:textColor="#6B7280"
+                    android:padding="4dp" />
+
+                <TextView
+                    android:id="@+id/tvOutput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:padding="8dp"
+                    android:textColor="#F97316"
+                    android:visibility="gone" />
+
+                <!-- Subscribe button row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSeeResults"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:text="Subscribe for Live Updates"
+                        android:textAllCaps="false"
+                        app:cornerRadius="24dp"
+                        app:backgroundTint="#6366F1"
+                        android:textColor="@android:color/white" />
+                </LinearLayout>
+
+                <!-- Poll title & description -->
+                <TextView
+                    android:id="@+id/txtTitleResults"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Poll Title"
+                    android:textStyle="bold"
+                    android:textSize="20sp"
+                    android:textColor="#111827"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/txtResults"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Results will appear here"
+                    android:textSize="16sp"
+                    android:textColor="#4B5563"
+                    android:paddingBottom="8dp" />
+
+                <!-- Charts -->
+                <com.github.mikephil.charting.charts.PieChart
+                    android:id="@+id/pieChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="260dp"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone"
+                    android:background="@android:color/transparent" />
+
+                <com.github.mikephil.charting.charts.BarChart
+                    android:id="@+id/barChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="300dp"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone"
+                    android:background="@android:color/transparent" />
+
+                <!-- Ranking list -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/listRanking"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone" />
+
+                <!-- Hint -->
+                <TextView
+                    android:id="@+id/txtHint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Pull to refresh on the list screen after voting."
+                    android:textColor="#6B7280"
+                    android:textSize="13sp"
+                    android:paddingTop="12dp" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+    </ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

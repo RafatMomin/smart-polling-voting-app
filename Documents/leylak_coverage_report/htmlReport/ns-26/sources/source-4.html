@@ -1,0 +1,123 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > PollModeratorRepository</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.Polling.repository</a>
+</div>
+
+<h1>Coverage Summary for Class: PollModeratorRepository (onetoone.Polling.repository)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+</tr>
+<tr>
+  <td class="name">PollModeratorRepository</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.Polling.repository;
+&nbsp;
+&nbsp;import onetoone.Polling.model.PollModerator;
+&nbsp;import org.springframework.data.jpa.repository.JpaRepository;
+&nbsp;import org.springframework.data.jpa.repository.Modifying;
+&nbsp;import org.springframework.data.jpa.repository.Query;
+&nbsp;import org.springframework.data.repository.query.Param;
+&nbsp;import org.springframework.stereotype.Repository;
+&nbsp;import java.util.List;
+&nbsp;import java.util.Optional;
+&nbsp;
+&nbsp;@Repository
+&nbsp;public interface PollModeratorRepository extends JpaRepository&lt;PollModerator, Long&gt; {
+&nbsp;
+&nbsp;    // find all moderators for a poll
+&nbsp;    @Query(&quot;SELECT pm FROM PollModerator pm WHERE pm.poll.id = :pollId&quot;)
+&nbsp;    List&lt;PollModerator&gt; findByPollId(@Param(&quot;pollId&quot;) Long pollId);
+&nbsp;
+&nbsp;    // find all currently active moderators for a poll
+&nbsp;    @Query(&quot;SELECT pm FROM PollModerator pm WHERE pm.poll.id = :pollId &quot; +
+&nbsp;            &quot;AND pm.isActive = true &quot; +
+&nbsp;            &quot;AND (pm.expiresAt IS NULL OR pm.expiresAt &gt; CURRENT_TIMESTAMP)&quot;)
+&nbsp;    List&lt;PollModerator&gt; findActiveModerators(@Param(&quot;pollId&quot;) Long pollId);
+&nbsp;
+&nbsp;    // find a specific moderator by poll and user email
+&nbsp;    @Query(&quot;SELECT pm FROM PollModerator pm WHERE pm.poll.id = :pollId &quot; +
+&nbsp;            &quot;AND pm.moderator.emailId = :moderatorEmail&quot;)
+&nbsp;    Optional&lt;PollModerator&gt; findByPollAndModerator(
+&nbsp;            @Param(&quot;pollId&quot;) Long pollId,
+&nbsp;            @Param(&quot;moderatorEmail&quot;) String moderatorEmail
+&nbsp;    );
+&nbsp;
+&nbsp;    // check if a user is an active moderator for a poll
+&nbsp;    @Query(&quot;SELECT CASE WHEN COUNT(pm) &gt; 0 THEN true ELSE false END &quot; +
+&nbsp;            &quot;FROM PollModerator pm WHERE pm.poll.id = :pollId &quot; +
+&nbsp;            &quot;AND pm.moderator.emailId = :moderatorEmail &quot; +
+&nbsp;            &quot;AND pm.isActive = true &quot; +
+&nbsp;            &quot;AND (pm.expiresAt IS NULL OR pm.expiresAt &gt; CURRENT_TIMESTAMP)&quot;)
+&nbsp;    boolean isActiveModerator(
+&nbsp;            @Param(&quot;pollId&quot;) Long pollId,
+&nbsp;            @Param(&quot;moderatorEmail&quot;) String moderatorEmail
+&nbsp;    );
+&nbsp;
+&nbsp;    // find all polls where a use is a moderator
+&nbsp;    @Query(&quot;SELECT pm FROM PollModerator pm WHERE pm.moderator.emailId = :moderatorEmail &quot; +
+&nbsp;            &quot;AND pm.isActive = true &quot; +
+&nbsp;            &quot;AND (pm.expiresAt IS NULL OR pm.expiresAt &gt; CURRENT_TIMESTAMP)&quot;)
+&nbsp;    List&lt;PollModerator&gt; findPollsModeratedByUser(@Param(&quot;moderatorEmail&quot;) String moderatorEmail);
+&nbsp;
+&nbsp;    // delete all moderators for a poll
+&nbsp;    @Modifying
+&nbsp;    @Query(&quot;DELETE FROM PollModerator pm WHERE pm.poll.id = :pollId&quot;)
+&nbsp;    void deleteByPollId(@Param(&quot;pollId&quot;) Long pollId);
+&nbsp;
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

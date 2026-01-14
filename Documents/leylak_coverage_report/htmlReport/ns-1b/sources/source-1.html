@@ -1,0 +1,156 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > GroupDTO</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.PollingWindow.dto</a>
+</div>
+
+<h1>Coverage Summary for Class: GroupDTO (onetoone.PollingWindow.dto)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">GroupDTO</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/12)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/2)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/19)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.PollingWindow.dto;
+&nbsp;
+&nbsp;import onetoone.PollingWindow.model.Group;
+&nbsp;
+&nbsp;import java.util.Set;
+&nbsp;
+<b class="nc">&nbsp;public class GroupDTO {</b>
+&nbsp;    private Long id;
+&nbsp;    private String name;
+&nbsp;    private String description;
+&nbsp;    private String creatorEmail;
+&nbsp;    private Set&lt;String&gt; memberEmails;
+&nbsp;
+&nbsp;    public static GroupDTO fromEntity(Group group) {
+<b class="nc">&nbsp;        if (group == null) return null;</b>
+<b class="nc">&nbsp;        GroupDTO dto = new GroupDTO();</b>
+<b class="nc">&nbsp;        dto.id = group.getId();</b>
+<b class="nc">&nbsp;        dto.name = group.getName();</b>
+<b class="nc">&nbsp;        dto.description = group.getDescription();</b>
+<b class="nc">&nbsp;        dto.creatorEmail = group.getCreatorEmail();</b>
+<b class="nc">&nbsp;        dto.memberEmails = group.getMemberEmails();</b>
+<b class="nc">&nbsp;        return dto;</b>
+&nbsp;    }
+&nbsp;
+<b class="nc">&nbsp;    public Long getId() { return id; }</b>
+<b class="nc">&nbsp;    public void setId(Long id) { this.id = id; }</b>
+&nbsp;
+<b class="nc">&nbsp;    public String getName() { return name; }</b>
+<b class="nc">&nbsp;    public void setName(String name) { this.name = name; }</b>
+&nbsp;
+<b class="nc">&nbsp;    public String getDescription() { return description; }</b>
+<b class="nc">&nbsp;    public void setDescription(String description) { this.description = description; }</b>
+&nbsp;
+<b class="nc">&nbsp;    public String getCreatorEmail() { return creatorEmail; }</b>
+<b class="nc">&nbsp;    public void setCreatorEmail(String creatorEmail) { this.creatorEmail = creatorEmail; }</b>
+&nbsp;
+<b class="nc">&nbsp;    public Set&lt;String&gt; getMemberEmails() { return memberEmails; }</b>
+<b class="nc">&nbsp;    public void setMemberEmails(Set&lt;String&gt; memberEmails) { this.memberEmails = memberEmails; }</b>
+&nbsp;}
+&nbsp;
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

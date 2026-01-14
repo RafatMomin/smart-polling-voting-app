@@ -1,0 +1,74 @@
+Complex Database Relationships - Backend Project
+=================================================
+
+AI CHAT SYSTEM
+--------------
+1. Users → ChatMessages (One-to-Many)
+   One user can create many chat messages with the AI assistant.
+
+2. ChatMessages ↔ Polls (Many-to-Many)
+   A chat message can reference multiple polls, and a poll can be referenced in multiple chat messages.
+
+
+LIVE DISCUSSION SYSTEM
+----------------------
+3. Users → Discussions as Host (One-to-Many)
+   One user can host many discussions as the creator.
+
+4. Discussion → DiscussionParticipants (One-to-Many)
+   One discussion can have many participants joining and leaving over time.
+
+5. Users → DiscussionParticipants (One-to-Many)
+   One user can participate in many different discussions.
+
+6. Users ↔ Discussions via DiscussionParticipant (Many-to-Many with attributes)
+   Users can participate in many discussions, and discussions can have many users, with additional metadata like join time, host status, and online status tracked in the join table.
+
+7. Discussion → DiscussionMessages (One-to-Many)
+   One discussion can contain many messages sent by participants.
+
+8. Users → DiscussionMessages as Sender (One-to-Many)
+   One user can send many messages across different discussions.
+
+9. Poll → Discussions (One-to-Many, optional)
+   One poll can have multiple discussions about it, though typically only one poll discussion is created per poll.
+
+10. Discussion → Tags (One-to-Many with Element Collection)
+    One discussion can have multiple tags for categorization and search purposes.
+
+
+POLLING WINDOW SYSTEM
+---------------------
+11. Users → PollingWindows as Creator (One-to-Many)
+    One user can create many polling windows to control vote timing and access.
+
+12. Poll → PollingWindows (One-to-Many)
+    One poll can have many polling windows for different groups or time periods.
+
+13. Users → Groups as Creator (One-to-Many)
+    One user can create many groups for organizing students or participants.
+
+14. Users ↔ Groups as Members (Many-to-Many)
+    Users can belong to many groups, and groups can contain many users as members.
+
+15. PollingWindow ↔ Groups (Many-to-Many)
+    Polling windows can target many groups for voting access, and groups can be targeted by many polling windows.
+
+16. PollingWindow ↔ Users as Individual Targets (Many-to-Many)
+    Polling windows can target specific individual users directly, and users can be individually targeted by many polling windows.
+
+
+RELATIONSHIP SUMMARY
+--------------------
+Total One-to-Many Relationships: 8
+Total Many-to-Many Relationships: 5
+Total Many-to-Many with Association Class: 1 (Users ↔ Discussions via DiscussionParticipant)
+Total Element Collection (One-to-Many variant): 1 (Discussion → Tags)
+
+Database Join Tables Created:
+- chat_poll_references (ChatMessage ↔ Poll)
+- discussion_participants (Users ↔ Discussion with attributes)
+- group_members (Users ↔ Group)
+- window_groups (PollingWindow ↔ Group)
+- window_individual_users (PollingWindow ↔ Users)
+- discussion_tags (Discussion → Tags element collection)

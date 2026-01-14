@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="#F4F0FA">
+
+    <!-- Toolbar -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbarCreate"
+        style="@style/Widget.Material3.Toolbar"
+        android:layout_width="0dp"
+        android:layout_height="?attr/actionBarSize"
+        android:background="#6366F1"
+        app:title="Create Poll"
+        app:titleCentered="true"
+        app:titleTextColor="@android:color/white"
+        app:navigationIconTint="@android:color/white"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Title -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="Title"
+        android:layout_marginTop="12dp"
+        app:boxBackgroundMode="outline"
+        app:boxStrokeColor="#A5B4FC"
+        app:boxStrokeWidthFocused="2dp"
+        app:layout_constraintTop_toBottomOf="@id/toolbarCreate"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#111827"
+            android:textColorHint="#9CA3AF" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Visibility selector (PUBLIC / PRIVATE) -->
+    <LinearLayout
+        android:id="@+id/rowVisibility"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toBottomOf="@id/tilTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/lblVisibility"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Visibility"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:textColor="#111827"
+            android:paddingEnd="8dp" />
+
+        <Spinner
+            android:id="@+id/spVisibility"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:spinnerMode="dropdown" />
+    </LinearLayout>
+
+    <!-- Type -->
+    <TextView
+        android:id="@+id/lblType"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Type"
+        android:textColor="#111827"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toBottomOf="@id/rowVisibility"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <Spinner
+        android:id="@+id/spType"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        app:layout_constraintTop_toBottomOf="@id/rowVisibility"
+        app:layout_constraintStart_toEndOf="@id/lblType"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Options (for MULTIPLE_CHOICE / RANKING) -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilOptions"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="Options (comma-separated)"
+        android:visibility="gone"
+        android:layout_marginTop="12dp"
+        app:boxBackgroundMode="outline"
+        app:boxStrokeColor="#A5B4FC"
+        app:boxStrokeWidthFocused="2dp"
+        app:layout_constraintTop_toBottomOf="@id/spType"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etOptions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textMultiLine"
+            android:minLines="2"
+            android:textColor="#111827"
+            android:textColorHint="#9CA3AF" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Context (optional) -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilContext"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="Context (optional)"
+        android:layout_marginTop="12dp"
+        app:boxBackgroundMode="outline"
+        app:boxStrokeColor="#A5B4FC"
+        app:boxStrokeWidthFocused="2dp"
+        app:layout_constraintTop_toBottomOf="@id/tilOptions"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etContext"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textMultiLine"
+            android:minLines="2"
+            android:textColor="#111827"
+            android:textColorHint="#9CA3AF" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Admins section -->
+    <TextView
+        android:id="@+id/lblAdmins"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Add Admins"
+        android:textStyle="bold"
+        android:textColor="#111827"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/tilContext"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilAdminEmail"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="Admin Email"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        app:boxBackgroundMode="outline"
+        app:boxStrokeColor="#A5B4FC"
+        app:boxStrokeWidthFocused="2dp"
+        app:layout_constraintTop_toBottomOf="@id/lblAdmins"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btnAddAdmin">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etAdminEmail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#111827"
+            android:textColorHint="#9CA3AF" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnAddAdmin"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:text="Add"
+        android:textAllCaps="false"
+        app:cornerRadius="20dp"
+        app:backgroundTint="#6366F1"
+        android:textColor="@android:color/white"
+        app:layout_constraintTop_toBottomOf="@id/lblAdmins"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chipAdmins"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:singleLine="false"
+        app:layout_constraintTop_toBottomOf="@id/tilAdminEmail"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Moderators section -->
+    <TextView
+        android:id="@+id/lblModerators"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Add Moderators"
+        android:textStyle="bold"
+        android:textColor="#111827"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/chipAdmins"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilModeratorEmail"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="Moderator Email"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        app:boxBackgroundMode="outline"
+        app:boxStrokeColor="#A5B4FC"
+        app:boxStrokeWidthFocused="2dp"
+        app:layout_constraintTop_toBottomOf="@id/lblModerators"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btnAddModerator">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etModeratorEmail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#111827"
+            android:textColorHint="#9CA3AF" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnAddModerator"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:text="Add"
+        android:textAllCaps="false"
+        app:cornerRadius="20dp"
+        app:backgroundTint="#6366F1"
+        android:textColor="@android:color/white"
+        app:layout_constraintTop_toBottomOf="@id/lblModerators"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chipModerators"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:singleLine="false"
+        app:layout_constraintTop_toBottomOf="@id/tilModeratorEmail"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Create button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnCreate"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:text="Create"
+        android:textAllCaps="false"
+        app:cornerRadius="24dp"
+        app:backgroundTint="#6366F1"
+        android:textColor="@android:color/white"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/chipModerators"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Progress -->
+    <ProgressBar
+        android:id="@+id/progress"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:visibility="gone"
+        android:layout_marginTop="12dp"
+        android:indeterminateTint="#6366F1"
+        app:layout_constraintTop_toBottomOf="@id/btnCreate"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,106 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > ChatMessageRepository</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.AI.repository</a>
+</div>
+
+<h1>Coverage Summary for Class: ChatMessageRepository (onetoone.AI.repository)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+</tr>
+<tr>
+  <td class="name">ChatMessageRepository</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.AI.repository;
+&nbsp;
+&nbsp;import onetoone.AI.model.ChatMessage;
+&nbsp;import org.springframework.data.jpa.repository.JpaRepository;
+&nbsp;import org.springframework.data.jpa.repository.Query;
+&nbsp;import org.springframework.data.repository.query.Param;
+&nbsp;import org.springframework.stereotype.Repository;
+&nbsp;
+&nbsp;import java.time.LocalDateTime;
+&nbsp;import java.util.List;
+&nbsp;
+&nbsp;@Repository
+&nbsp;public interface ChatMessageRepository extends JpaRepository&lt;ChatMessage, Long&gt; {
+&nbsp;
+&nbsp;    // Find all messages from a specific user by email
+&nbsp;    @Query(&quot;SELECT c FROM ChatMessage c WHERE c.user.emailId = :email ORDER BY c.timestamp DESC&quot;)
+&nbsp;    List&lt;ChatMessage&gt; findByUserEmailOrderByTimestampDesc(@Param(&quot;email&quot;) String email);
+&nbsp;
+&nbsp;    // Count total messages for a user
+&nbsp;    @Query(&quot;SELECT COUNT(c) FROM ChatMessage c WHERE c.user.emailId = :email&quot;)
+&nbsp;    long countByUserEmail(@Param(&quot;email&quot;) String email);
+&nbsp;
+&nbsp;    // Find messages within a time range
+&nbsp;    List&lt;ChatMessage&gt; findByTimestampBetween(LocalDateTime start, LocalDateTime end);
+&nbsp;
+&nbsp;    // Find messages that referenced a specific poll
+&nbsp;    @Query(&quot;SELECT c FROM ChatMessage c JOIN c.referencedPolls p WHERE p.id = :pollId ORDER BY c.timestamp DESC&quot;)
+&nbsp;    List&lt;ChatMessage&gt; findByReferencedPoll(@Param(&quot;pollId&quot;) Long pollId);
+&nbsp;
+&nbsp;    // Find user&#39;s messages that referenced a specific poll
+&nbsp;    @Query(&quot;SELECT c FROM ChatMessage c JOIN c.referencedPolls p &quot; +
+&nbsp;            &quot;WHERE c.user.emailId = :email AND p.id = :pollId ORDER BY c.timestamp DESC&quot;)
+&nbsp;    List&lt;ChatMessage&gt; findByUserAndPoll(@Param(&quot;email&quot;) String email, @Param(&quot;pollId&quot;) Long pollId);
+&nbsp;
+&nbsp;    // Get most recent N messages for a user
+&nbsp;    @Query(value = &quot;SELECT c FROM ChatMessage c WHERE c.user.emailId = :email ORDER BY c.timestamp DESC&quot;)
+&nbsp;    List&lt;ChatMessage&gt; findTopNByUserEmail(@Param(&quot;email&quot;) String email);
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

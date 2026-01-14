@@ -1,0 +1,309 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > SentenceTransformerEmbeddingModel</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.AI.model</a>
+</div>
+
+<h1>Coverage Summary for Class: SentenceTransformerEmbeddingModel (onetoone.AI.model)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">SentenceTransformerEmbeddingModel</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    37.5%
+  </span>
+  <span class="absValue">
+    (3/8)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    1.4%
+  </span>
+  <span class="absValue">
+    (1/72)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    12.4%
+  </span>
+  <span class="absValue">
+    (11/89)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;// src/main/java/onetoone/AI/model/SentenceTransformerEmbeddingModel.java
+&nbsp;package onetoone.AI.model;
+&nbsp;
+&nbsp;import ai.djl.huggingface.tokenizers.HuggingFaceTokenizer;
+&nbsp;import jakarta.annotation.PostConstruct;
+&nbsp;import onetoone.AI.util.HuggingFaceTokenizerClass;  // ← CORRECT
+&nbsp;import ai.onnxruntime.*;
+&nbsp;import onetoone.AI.util.HuggingFaceTokenizerClass;
+&nbsp;import org.springframework.core.io.ClassPathResource;
+&nbsp;import org.springframework.stereotype.Component;
+&nbsp;import org.slf4j.Logger;
+&nbsp;import org.slf4j.LoggerFactory;   // ADD THIS
+&nbsp;
+&nbsp;import java.io.InputStream;
+&nbsp;import java.nio.file.Files;
+&nbsp;import java.nio.file.Paths;
+&nbsp;import java.util.*;
+&nbsp;
+&nbsp;@Component
+<b class="fc">&nbsp;public class SentenceTransformerEmbeddingModel {</b>
+&nbsp;
+<b class="fc">&nbsp;    private static final Logger log = LoggerFactory.getLogger(SentenceTransformerEmbeddingModel.class);  // ADD THIS</b>
+&nbsp;    private OrtEnvironment env;
+&nbsp;    private OrtSession session;
+&nbsp;    private HuggingFaceTokenizerClass tokenizer;
+&nbsp;
+&nbsp;    private static final String MODEL_PATH = &quot;models/sentence-transformers/all-MiniLM-L6-v2/model.onnx&quot;;
+&nbsp;    private static final String TOKENIZER_PATH = &quot;models/sentence-transformers/all-MiniLM-L6-v2/tokenizer.json&quot;;
+&nbsp;
+&nbsp;
+&nbsp;    @PostConstruct
+&nbsp;    public void init() {
+&nbsp;        try {
+<b class="fc">&nbsp;            env = OrtEnvironment.getEnvironment();</b>
+<b class="fc">&nbsp;            log.info(&quot;ONNX Environment created&quot;);</b>
+&nbsp;
+<b class="fc">&nbsp;            ClassPathResource modelRes = new ClassPathResource(MODEL_PATH);</b>
+<b class="pc">&nbsp;            if (!modelRes.exists()) {</b>
+<b class="nc">&nbsp;                throw new IllegalStateException(&quot;model.onnx not found: &quot; + MODEL_PATH);</b>
+&nbsp;            }
+&nbsp;
+<b class="fc">&nbsp;            byte[] modelBytes = Files.readAllBytes(Paths.get(modelRes.getURI()));</b>
+<b class="fc">&nbsp;            session = env.createSession(modelBytes, new OrtSession.SessionOptions());</b>
+<b class="fc">&nbsp;            log.info(&quot;ONNX Session created&quot;);</b>
+&nbsp;
+&nbsp;            // DJL handles tokenizer download
+<b class="fc">&nbsp;            tokenizer = new HuggingFaceTokenizerClass();</b>
+<b class="fc">&nbsp;            log.info(&quot;HuggingFace tokenizer initialized&quot;);</b>
+&nbsp;
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            log.error(&quot;Failed to initialize embedding model&quot;, e);</b>
+<b class="nc">&nbsp;            throw new RuntimeException(&quot;Embedding model init failed&quot;, e);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public float[] embed(String text) throws OrtException {
+<b class="nc">&nbsp;        if (text == null || text.trim().isEmpty()) {</b>
+<b class="nc">&nbsp;            throw new IllegalArgumentException(&quot;Input text cannot be null or empty&quot;);</b>
+&nbsp;        }
+<b class="nc">&nbsp;        text = text.trim();</b>
+&nbsp;
+<b class="nc">&nbsp;        long[] inputIds = tokenizer.encode(text);</b>
+<b class="nc">&nbsp;        if (inputIds == null || inputIds.length == 0) {</b>
+<b class="nc">&nbsp;            throw new OrtException(&quot;Tokenizer returned no tokens&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        long[] attentionMask = tokenizer.getAttentionMask(text);</b>
+<b class="nc">&nbsp;        long[] tokenTypeIds = tokenizer.getTokenTypeIds(text);</b>
+&nbsp;
+<b class="nc">&nbsp;        try (OnnxTensor ids = OnnxTensor.createTensor(env, new long[][]{inputIds});</b>
+<b class="nc">&nbsp;             OnnxTensor mask = OnnxTensor.createTensor(env, new long[][]{attentionMask});</b>
+<b class="nc">&nbsp;             OnnxTensor types = OnnxTensor.createTensor(env, new long[][]{tokenTypeIds});</b>
+<b class="nc">&nbsp;             OrtSession.Result result = session.run(Map.of(</b>
+&nbsp;                     &quot;input_ids&quot;, ids,
+&nbsp;                     &quot;attention_mask&quot;, mask,
+&nbsp;                     &quot;token_type_ids&quot;, types
+&nbsp;             ))) {
+&nbsp;
+<b class="nc">&nbsp;            Iterator&lt;Map.Entry&lt;String, OnnxValue&gt;&gt; it = result.iterator();</b>
+<b class="nc">&nbsp;            if (!it.hasNext()) throw new OrtException(&quot;No output&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;            OnnxValue value = it.next().getValue();</b>
+<b class="nc">&nbsp;            if (!(value instanceof OnnxTensor tensor)) {</b>
+<b class="nc">&nbsp;                throw new OrtException(&quot;Expected tensor&quot;);</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            Object raw = tensor.getValue();</b>
+<b class="nc">&nbsp;            if (!(raw instanceof float[][][] embeddings)) {</b>
+<b class="nc">&nbsp;                throw new OrtException(&quot;Expected float[][][], got: &quot; + raw);</b>
+&nbsp;            }
+&nbsp;
+&nbsp;            // CRITICAL: NULL CHECK HERE
+<b class="nc">&nbsp;            if (embeddings.length == 0) {</b>
+<b class="nc">&nbsp;                throw new OrtException(&quot;Batch size is 0&quot;);</b>
+&nbsp;            }
+<b class="nc">&nbsp;            if (embeddings[0] == null) {</b>
+<b class="nc">&nbsp;                log.error(&quot;embeddings[0] is NULL! Input: &#39;{}&#39;, inputIds: {}&quot;, text, Arrays.toString(inputIds));</b>
+<b class="nc">&nbsp;                throw new OrtException(&quot;Model returned null token embeddings&quot;);</b>
+&nbsp;            }
+<b class="nc">&nbsp;            if (embeddings[0].length == 0) {</b>
+<b class="nc">&nbsp;                throw new OrtException(&quot;No tokens in sequence&quot;);</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            return normalize(meanPool(embeddings[0]));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    // meanPool()
+&nbsp;    private float[] meanPool(float[][] tokenEmbeddings) {
+<b class="nc">&nbsp;        if (tokenEmbeddings == null || tokenEmbeddings.length == 0) {</b>
+<b class="nc">&nbsp;            log.warn(&quot;meanPool: tokenEmbeddings is null or empty&quot;);</b>
+<b class="nc">&nbsp;            return new float[384];</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        int dim = -1;</b>
+<b class="nc">&nbsp;        float[] pooled = new float[384];</b>
+<b class="nc">&nbsp;        int validCount = 0;</b>
+&nbsp;
+<b class="nc">&nbsp;        for (int i = 0; i &lt; tokenEmbeddings.length; i++) {</b>
+<b class="nc">&nbsp;            float[] emb = tokenEmbeddings[i];</b>
+<b class="nc">&nbsp;            if (emb == null) {</b>
+<b class="nc">&nbsp;                log.warn(&quot;meanPool: tokenEmbeddings[{}] is null&quot;, i);</b>
+&nbsp;                continue;
+&nbsp;            }
+<b class="nc">&nbsp;            if (emb.length == 0) {</b>
+<b class="nc">&nbsp;                log.warn(&quot;meanPool: tokenEmbeddings[{}] is empty&quot;, i);</b>
+&nbsp;                continue;
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            if (dim == -1) {</b>
+<b class="nc">&nbsp;                dim = emb.length;</b>
+<b class="nc">&nbsp;            } else if (emb.length != dim) {</b>
+<b class="nc">&nbsp;                log.warn(&quot;meanPool: dim mismatch: {} vs {}&quot;, emb.length, dim);</b>
+&nbsp;                continue;
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            boolean hasValue = false;</b>
+<b class="nc">&nbsp;            for (float v : emb) {</b>
+<b class="nc">&nbsp;                if (Math.abs(v) &gt; 1e-8) {</b>
+<b class="nc">&nbsp;                    hasValue = true;</b>
+&nbsp;                    break;
+&nbsp;                }
+&nbsp;            }
+<b class="nc">&nbsp;            if (!hasValue) continue;</b>
+&nbsp;
+<b class="nc">&nbsp;            for (int j = 0; j &lt; dim; j++) {</b>
+<b class="nc">&nbsp;                pooled[j] += emb[j];</b>
+&nbsp;            }
+<b class="nc">&nbsp;            validCount++;</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        if (validCount == 0) {</b>
+<b class="nc">&nbsp;            log.warn(&quot;meanPool: no valid embeddings, returning zero vector&quot;);</b>
+<b class="nc">&nbsp;            return new float[dim &gt;= 0 ? dim : 384];</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        for (int j = 0; j &lt; dim; j++) {</b>
+<b class="nc">&nbsp;            pooled[j] /= validCount;</b>
+&nbsp;        }
+<b class="nc">&nbsp;        return Arrays.copyOf(pooled, dim);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private float[] normalize(float[] v) {
+<b class="nc">&nbsp;        if (v == null || v.length == 0) return new float[384];</b>
+<b class="nc">&nbsp;        float sum = 0;</b>
+<b class="nc">&nbsp;        for (float x : v) sum += x * x;</b>
+<b class="nc">&nbsp;        float norm = (float) Math.sqrt(sum);</b>
+<b class="nc">&nbsp;        if (norm &lt; 1e-8) return v;</b>
+<b class="nc">&nbsp;        float[] out = new float[v.length];</b>
+<b class="nc">&nbsp;        for (int i = 0; i &lt; v.length; i++) out[i] = v[i] / norm;</b>
+<b class="nc">&nbsp;        return out;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void close() throws OrtException {
+<b class="nc">&nbsp;        if (session != null) session.close();</b>
+<b class="nc">&nbsp;        if (env != null) env.close();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // MAIN METHOD — RUN THIS!
+&nbsp;    public static void main(String[] args) throws Exception {
+<b class="nc">&nbsp;        SentenceTransformerEmbeddingModel model = new SentenceTransformerEmbeddingModel();</b>
+<b class="nc">&nbsp;        model.init();</b>
+&nbsp;
+<b class="nc">&nbsp;        String[] tests = {&quot;Hello world&quot;, &quot;How are you?&quot;, &quot;This is a test sentence.&quot;};</b>
+<b class="nc">&nbsp;        for (String text : tests) {</b>
+<b class="nc">&nbsp;            float[] vec = model.embed(text);</b>
+<b class="nc">&nbsp;            System.out.printf(&quot;Text: \&quot;%s\&quot; → dim: %d, first 5: %s%n&quot;,</b>
+<b class="nc">&nbsp;                    text, vec.length, Arrays.toString(Arrays.copyOf(vec, 5)));</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        model.close();
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

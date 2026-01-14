@@ -1,0 +1,286 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > GroupController</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.PollingWindow.controller</a>
+</div>
+
+<h1>Coverage Summary for Class: GroupController (onetoone.PollingWindow.controller)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">GroupController</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    10%
+  </span>
+  <span class="absValue">
+    (1/10)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/10)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    1.9%
+  </span>
+  <span class="absValue">
+    (1/53)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.PollingWindow.controller;
+&nbsp;
+&nbsp;import onetoone.PollingWindow.dto.GroupResponseDTO;
+&nbsp;import onetoone.PollingWindow.model.Group;
+&nbsp;import onetoone.PollingWindow.service.GroupService;
+&nbsp;import org.springframework.beans.factory.annotation.Autowired;
+&nbsp;import org.springframework.http.ResponseEntity;
+&nbsp;import org.springframework.web.bind.annotation.*;
+&nbsp;
+&nbsp;import java.util.List;
+&nbsp;import java.util.Map;
+&nbsp;import java.util.Set;
+&nbsp;import java.util.stream.Collectors;
+&nbsp;
+&nbsp;@RestController
+&nbsp;@RequestMapping(&quot;/groups&quot;)
+<b class="fc">&nbsp;public class GroupController {</b>
+&nbsp;
+&nbsp;    @Autowired
+&nbsp;    private GroupService groupService;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Create a new group
+&nbsp;     */
+&nbsp;    @PostMapping
+&nbsp;    public ResponseEntity&lt;?&gt; createGroup(@RequestBody Map&lt;String, String&gt; request) {
+&nbsp;        try {
+<b class="nc">&nbsp;            String name = request.get(&quot;name&quot;);</b>
+<b class="nc">&nbsp;            String description = request.get(&quot;description&quot;);</b>
+<b class="nc">&nbsp;            String creatorEmail = request.get(&quot;creatorEmail&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;            if (name == null || creatorEmail == null) {</b>
+<b class="nc">&nbsp;                return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, &quot;Name and creatorEmail are required&quot;));</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            Group group = groupService.createGroup(name, description, creatorEmail);</b>
+<b class="nc">&nbsp;            GroupResponseDTO dto = GroupResponseDTO.fromEntity(group);</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(dto);</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Add a member to a group
+&nbsp;     */
+&nbsp;    @PostMapping(&quot;/{groupId}/members&quot;)
+&nbsp;    public ResponseEntity&lt;?&gt; addMember(@PathVariable Long groupId, @RequestBody Map&lt;String, String&gt; request) {
+&nbsp;        try {
+<b class="nc">&nbsp;            String memberEmail = request.get(&quot;memberEmail&quot;);</b>
+<b class="nc">&nbsp;            if (memberEmail == null) {</b>
+<b class="nc">&nbsp;                return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, &quot;memberEmail is required&quot;));</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            Group group = groupService.addMemberToGroup(groupId, memberEmail);</b>
+<b class="nc">&nbsp;            GroupResponseDTO dto = GroupResponseDTO.fromEntity(group);</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(dto);</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Add multiple members to a group
+&nbsp;     */
+&nbsp;    @PostMapping(&quot;/{groupId}/members/batch&quot;)
+&nbsp;    public ResponseEntity&lt;?&gt; addMultipleMembers(@PathVariable Long groupId, @RequestBody Map&lt;String, Set&lt;String&gt;&gt; request) {
+&nbsp;        try {
+<b class="nc">&nbsp;            Set&lt;String&gt; memberEmails = request.get(&quot;memberEmails&quot;);</b>
+<b class="nc">&nbsp;            if (memberEmails == null || memberEmails.isEmpty()) {</b>
+<b class="nc">&nbsp;                return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, &quot;memberEmails are required&quot;));</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            Group group = groupService.addMultipleMembersToGroup(groupId, memberEmails);</b>
+<b class="nc">&nbsp;            GroupResponseDTO dto = GroupResponseDTO.fromEntity(group);</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(dto);</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Remove a member from a group
+&nbsp;     */
+&nbsp;    @DeleteMapping(&quot;/{groupId}/members/{memberEmail}&quot;)
+&nbsp;    public ResponseEntity&lt;?&gt; removeMember(@PathVariable Long groupId, @PathVariable String memberEmail) {
+&nbsp;        try {
+<b class="nc">&nbsp;            Group group = groupService.removeMemberFromGroup(groupId, memberEmail);</b>
+<b class="nc">&nbsp;            GroupResponseDTO dto = GroupResponseDTO.fromEntity(group);</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(dto);</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get all groups created by a user
+&nbsp;     */
+&nbsp;    @GetMapping(&quot;/creator/{email}&quot;)
+&nbsp;    public ResponseEntity&lt;?&gt; getGroupsByCreator(@PathVariable String email) {
+&nbsp;        try {
+<b class="nc">&nbsp;            List&lt;Group&gt; groups = groupService.getGroupsByCreator(email);</b>
+<b class="nc">&nbsp;            List&lt;GroupResponseDTO&gt; dtos = groups.stream()</b>
+<b class="nc">&nbsp;                    .map(GroupResponseDTO::fromEntity)</b>
+<b class="nc">&nbsp;                    .collect(Collectors.toList());</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(dtos);</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get all groups a user is a member of
+&nbsp;     */
+&nbsp;    @GetMapping(&quot;/member/{email}&quot;)
+&nbsp;    public ResponseEntity&lt;?&gt; getGroupsForUser(@PathVariable String email) {
+&nbsp;        try {
+<b class="nc">&nbsp;            List&lt;Group&gt; groups = groupService.getGroupsForUser(email);</b>
+<b class="nc">&nbsp;            List&lt;GroupResponseDTO&gt; dtos = groups.stream()</b>
+<b class="nc">&nbsp;                    .map(GroupResponseDTO::fromEntity)</b>
+<b class="nc">&nbsp;                    .collect(Collectors.toList());</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(dtos);</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get a specific group
+&nbsp;     */
+&nbsp;    @GetMapping(&quot;/{groupId}&quot;)
+&nbsp;    public ResponseEntity&lt;?&gt; getGroup(@PathVariable Long groupId) {
+&nbsp;        try {
+<b class="nc">&nbsp;            Group group = groupService.getGroupById(groupId);</b>
+<b class="nc">&nbsp;            GroupResponseDTO dto = GroupResponseDTO.fromEntity(group);</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(dto);</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get all groups
+&nbsp;     */
+&nbsp;    @GetMapping
+&nbsp;    public ResponseEntity&lt;?&gt; getAllGroups() {
+&nbsp;        try {
+<b class="nc">&nbsp;            List&lt;Group&gt; groups = groupService.getAllGroups();</b>
+<b class="nc">&nbsp;            List&lt;GroupResponseDTO&gt; dtos = groups.stream()</b>
+<b class="nc">&nbsp;                    .map(GroupResponseDTO::fromEntity)</b>
+<b class="nc">&nbsp;                    .collect(Collectors.toList());</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(dtos);</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Delete a group
+&nbsp;     */
+&nbsp;    @DeleteMapping(&quot;/{groupId}&quot;)
+&nbsp;    public ResponseEntity&lt;?&gt; deleteGroup(@PathVariable Long groupId) {
+&nbsp;        try {
+<b class="nc">&nbsp;            groupService.deleteGroup(groupId);</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(Map.of(&quot;message&quot;, &quot;Group deleted successfully&quot;));</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,235 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > LiveResultsMessage</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.LiveResults.dto</a>
+</div>
+
+<h1>Coverage Summary for Class: LiveResultsMessage (onetoone.LiveResults.dto)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">LiveResultsMessage</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/10)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/14)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">LiveResultsMessage$OptionDistribution</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/8)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/11)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/18)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/25)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.LiveResults.dto;
+&nbsp;
+&nbsp;import com.fasterxml.jackson.annotation.JsonProperty;
+&nbsp;import java.util.List;
+&nbsp;
+&nbsp;public class LiveResultsMessage {
+&nbsp;
+&nbsp;    @JsonProperty(&quot;pollId&quot;)
+&nbsp;    private Long pollId;
+&nbsp;
+&nbsp;    @JsonProperty(&quot;status&quot;)
+&nbsp;    private String status;
+&nbsp;
+&nbsp;    @JsonProperty(&quot;totalVotes&quot;)
+&nbsp;    private Integer totalVotes;
+&nbsp;
+&nbsp;    @JsonProperty(&quot;distribution&quot;)
+&nbsp;    private List&lt;OptionDistribution&gt; distribution;
+&nbsp;
+<b class="nc">&nbsp;    public LiveResultsMessage() {}</b>
+&nbsp;
+<b class="nc">&nbsp;    public LiveResultsMessage(Long pollId, String status, Integer totalVotes, List&lt;OptionDistribution&gt; distribution) {</b>
+<b class="nc">&nbsp;        this.pollId = pollId;</b>
+<b class="nc">&nbsp;        this.status = status;</b>
+<b class="nc">&nbsp;        this.totalVotes = totalVotes;</b>
+<b class="nc">&nbsp;        this.distribution = distribution;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // getters and setters for poll stuff
+&nbsp;    public Long getPollId() {
+<b class="nc">&nbsp;        return pollId;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setPollId(Long pollId) {
+<b class="nc">&nbsp;        this.pollId = pollId;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getStatus() {
+<b class="nc">&nbsp;        return status;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setStatus(String status) {
+<b class="nc">&nbsp;        this.status = status;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Integer getTotalVotes() {
+<b class="nc">&nbsp;        return totalVotes;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTotalVotes(Integer totalVotes) {
+<b class="nc">&nbsp;        this.totalVotes = totalVotes;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public List&lt;OptionDistribution&gt; getDistribution() {
+<b class="nc">&nbsp;        return distribution;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setDistribution(List&lt;OptionDistribution&gt; distribution) {
+<b class="nc">&nbsp;        this.distribution = distribution;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static class OptionDistribution {
+&nbsp;        @JsonProperty(&quot;optionId&quot;)
+&nbsp;        private Long optionId;
+&nbsp;
+&nbsp;        @JsonProperty(&quot;count&quot;)
+&nbsp;        private Integer count;
+&nbsp;
+&nbsp;        @JsonProperty(&quot;percent&quot;)
+&nbsp;        private Double percent;
+&nbsp;
+<b class="nc">&nbsp;        public OptionDistribution() {}</b>
+&nbsp;
+<b class="nc">&nbsp;        public OptionDistribution(Long optionId, Integer count, Double percent) {</b>
+<b class="nc">&nbsp;            this.optionId = optionId;</b>
+<b class="nc">&nbsp;            this.count = count;</b>
+<b class="nc">&nbsp;            this.percent = percent;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // getters and setters for options and data
+&nbsp;        public Long getOptionId() {
+<b class="nc">&nbsp;            return optionId;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public void setOptionId(Long optionId) {
+<b class="nc">&nbsp;            this.optionId = optionId;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public Integer getCount() {
+<b class="nc">&nbsp;            return count;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public void setCount(Integer count) {
+<b class="nc">&nbsp;            this.count = count;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public Double getPercent() {
+<b class="nc">&nbsp;            return percent;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public void setPercent(Double percent) {
+<b class="nc">&nbsp;            this.percent = percent;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

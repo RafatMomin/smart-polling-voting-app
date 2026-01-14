@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="#F3F4F6"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Welcome header -->
+        <TextView
+            android:id="@+id/tvWelcome"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Welcome"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="#111827"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/tvWelcomeSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Manage your account and polls"
+            android:textSize="14sp"
+            android:textColor="#6B7280"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Editable display name -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Name">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#111827"
+                android:textColorHint="#9CA3AF" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Save button (Cardinal primary) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSave"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Save changes"
+            android:textAllCaps="false"
+            android:layout_marginTop="20dp"
+            app:cornerRadius="24dp"
+            app:backgroundTint="#C8102E"
+            android:textColor="@android:color/white" />
+
+        <!-- Open Poll & Vote (primary) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnOpen"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Open Poll &amp; Vote"
+            android:textAllCaps="false"
+            android:layout_marginTop="12dp"
+            app:cornerRadius="24dp"
+            app:backgroundTint="#C8102E"
+            android:textColor="@android:color/white" />
+
+        <!-- Delete account (danger outlined) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDelete"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Delete account"
+            android:textAllCaps="false"
+            android:layout_marginTop="12dp"
+            app:cornerRadius="24dp"
+            app:strokeColor="#C8102E"
+            app:strokeWidth="2dp"
+            android:textColor="#C8102E" />
+
+        <!-- Logout (neutral) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLogout"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Logout"
+            android:textAllCaps="false"
+            android:layout_marginTop="12dp"
+            app:cornerRadius="24dp"
+            app:backgroundTint="#E5E7EB"
+            android:textColor="#111827" />
+
+        <!-- Chat with Assistant (gold accent) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnChatbot"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Chat with Assistant"
+            android:textAllCaps="false"
+            android:layout_marginTop="16dp"
+            app:cornerRadius="24dp"
+            app:backgroundTint="#F1BE48"
+            android:textColor="#111827" />
+
+        <!-- Progress indicator -->
+        <ProgressBar
+            android:id="@+id/progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="16dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+</ScrollView>

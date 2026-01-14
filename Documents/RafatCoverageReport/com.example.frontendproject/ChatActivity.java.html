@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ChatActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debug</a> &gt; <a href="index.source.html" class="el_package">com.example.frontendproject</a> &gt; <span class="el_source">ChatActivity.java</span></div><h1>ChatActivity.java</h1><pre class="source lang-java linenums">package com.example.frontendproject;
+
+import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
+import android.widget.EditText;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.frontendproject.net.RetrofitClient;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+
+/**
+ * ChatActivity provides a chatbot UI using RecyclerView.
+ * It allows the user to send messages, shows them immediately in the chat,
+ * then calls the backend chatbot API (authenticated if logged in, otherwise public)
+ * and displays the chatbot response.
+ */
+
+<span class="fc" id="L32">    public class ChatActivity extends AppCompatActivity {</span>
+
+    private RecyclerView rv;
+    private ChatAdapter adapter;
+    private EditText et;
+    private Button btn;
+    /**
+     * Initializes the chatbot screen UI, sets up RecyclerView + adapter,
+     * and registers the Send button click listener.
+     *
+     * @param savedInstanceState previous saved instance state if any
+     */
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+<span class="fc" id="L46">        super.onCreate(savedInstanceState);</span>
+<span class="fc" id="L47">        setContentView(R.layout.activity_chat);</span>
+
+<span class="fc" id="L49">        rv = findViewById(R.id.rvChat);</span>
+<span class="fc" id="L50">        et = findViewById(R.id.etMessage);</span>
+<span class="fc" id="L51">        btn = findViewById(R.id.btnSend);</span>
+
+<span class="fc" id="L53">        LinearLayoutManager lm = new LinearLayoutManager(this);</span>
+<span class="fc" id="L54">        lm.setStackFromEnd(true);</span>
+<span class="fc" id="L55">        rv.setLayoutManager(lm);</span>
+
+<span class="fc" id="L57">        adapter = new ChatAdapter();</span>
+<span class="fc" id="L58">        rv.setAdapter(adapter);</span>
+
+<span class="fc" id="L60">        btn.setOnClickListener(v -&gt; sendMessage());</span>
+<span class="fc" id="L61">        loadChatHistoryIfLoggedIn();</span>
+<span class="fc" id="L62">    }</span>
+
+    /**
+     * Reads user message input, displays it in the chat UI,
+     * sends it to the appropriate backend chatbot endpoint,
+     * and updates the UI with the bot response.
+     *
+     * Uses authenticated endpoint if user is logged in,
+     * otherwise uses public endpoint.
+     */
+    private void sendMessage() {
+<span class="fc" id="L73">        String userText = et.getText().toString().trim();</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">        if (TextUtils.isEmpty(userText)) return;</span>
+
+        // UI: show user bubble immediately
+<span class="fc" id="L77">        adapter.addUserMessage(userText);</span>
+<span class="fc" id="L78">        scrollToBottom();</span>
+<span class="fc" id="L79">        et.setText(&quot;&quot;);</span>
+<span class="fc" id="L80">        hideKeyboard();</span>
+
+        // Disable button &amp; show typing indicator
+<span class="fc" id="L83">        btn.setEnabled(false);</span>
+<span class="fc" id="L84">        adapter.addTypingIndicator();</span>
+<span class="fc" id="L85">        scrollToBottom();</span>
+
+        // Decide endpoint based on auth
+<span class="fc" id="L88">        SessionManager session = new SessionManager(this);</span>
+<span class="fc" id="L89">        boolean loggedIn = session.isLoggedIn();</span>
+
+        // TODO: get your token from SessionManager. Adjust method name if different.
+        // Many apps store it like &quot;Bearer &lt;jwt&gt;&quot; already. If you only have raw JWT,
+        // prepend &quot;Bearer &quot; here.
+<span class="fc" id="L94">        String token = null;</span>
+<span class="pc bpc" id="L95" title="1 of 2 branches missed.">        if (loggedIn) {</span>
+            // Example guesses—rename to what your SessionManager exposes:
+            // token = session.getToken();
+            // token = session.getAuthToken();
+            // token = &quot;Bearer &quot; + session.getJwt();
+<span class="fc" id="L100">            token = session.getToken(); // &lt;--- CHANGE THIS if your method name differs</span>
+<span class="pc bpc" id="L101" title="2 of 4 branches missed.">            if (token != null &amp;&amp; !token.toLowerCase().startsWith(&quot;bearer &quot;)) {</span>
+<span class="fc" id="L102">                token = &quot;Bearer &quot; + token;</span>
+            }
+        }
+
+        // Make the call
+<span class="pc bpc" id="L107" title="2 of 4 branches missed.">        if (loggedIn &amp;&amp; token != null) {</span>
+            // Authenticated chat
+<span class="fc" id="L109">            com.example.frontendproject.net.RetrofitClient.chat()</span>
+<span class="fc" id="L110">                    .getChatAuth(token, userText)</span>
+<span class="fc" id="L111">                    .enqueue(new retrofit2.Callback&lt;okhttp3.ResponseBody&gt;() {</span>
+                        @Override public void onResponse(retrofit2.Call&lt;okhttp3.ResponseBody&gt; call,
+                                                         retrofit2.Response&lt;okhttp3.ResponseBody&gt; response) {
+<span class="fc" id="L114">                            btn.setEnabled(true);</span>
+<span class="pc bpc" id="L115" title="2 of 4 branches missed.">                            if (response.isSuccessful() &amp;&amp; response.body() != null) {</span>
+                                try {
+<span class="fc" id="L117">                                    String bot = response.body().string();</span>
+<span class="pc bpc" id="L118" title="1 of 2 branches missed.">                                    if (TextUtils.isEmpty(bot)) bot = &quot;(empty reply)&quot;;</span>
+<span class="fc" id="L119">                                    adapter.updateLastBotMessage(bot);</span>
+<span class="nc" id="L120">                                } catch (Exception e) {</span>
+<span class="nc" id="L121">                                    adapter.updateLastBotMessage(&quot;Error reading reply.&quot;);</span>
+<span class="pc" id="L122">                                }</span>
+                            } else {
+                                // If backend returns JSON error on auth endpoints, show it as text
+<span class="nc" id="L125">                                adapter.updateLastBotMessage(&quot;Server error: &quot; + response.code());</span>
+                            }
+<span class="fc" id="L127">                            scrollToBottom();</span>
+<span class="fc" id="L128">                        }</span>
+
+                        @Override public void onFailure(retrofit2.Call&lt;okhttp3.ResponseBody&gt; call, Throwable t) {
+<span class="nc" id="L131">                            btn.setEnabled(true);</span>
+<span class="nc" id="L132">                            adapter.updateLastBotMessage(&quot;Network error: &quot; + t.getMessage());</span>
+<span class="nc" id="L133">                            scrollToBottom();</span>
+<span class="nc" id="L134">                        }</span>
+                    });
+
+        } else {
+            // Public chat (no auth)
+<span class="nc" id="L139">            com.example.frontendproject.net.RetrofitClient.chat()</span>
+<span class="nc" id="L140">                    .getChatPublic(userText)</span>
+<span class="nc" id="L141">                    .enqueue(new retrofit2.Callback&lt;okhttp3.ResponseBody&gt;() {</span>
+                        @Override public void onResponse(retrofit2.Call&lt;okhttp3.ResponseBody&gt; call,
+                                                         retrofit2.Response&lt;okhttp3.ResponseBody&gt; response) {
+<span class="nc" id="L144">                            btn.setEnabled(true);</span>
+<span class="nc bnc" id="L145" title="All 4 branches missed.">                            if (response.isSuccessful() &amp;&amp; response.body() != null) {</span>
+                                try {
+<span class="nc" id="L147">                                    String bot = response.body().string();</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">                                    if (TextUtils.isEmpty(bot)) bot = &quot;(empty reply)&quot;;</span>
+<span class="nc" id="L149">                                    adapter.updateLastBotMessage(bot);</span>
+<span class="nc" id="L150">                                } catch (Exception e) {</span>
+<span class="nc" id="L151">                                    adapter.updateLastBotMessage(&quot;Error reading reply.&quot;);</span>
+<span class="nc" id="L152">                                }</span>
+                            } else {
+<span class="nc" id="L154">                                adapter.updateLastBotMessage(&quot;Server error: &quot; + response.code());</span>
+                            }
+<span class="nc" id="L156">                            scrollToBottom();</span>
+<span class="nc" id="L157">                        }</span>
+
+                        @Override public void onFailure(retrofit2.Call&lt;okhttp3.ResponseBody&gt; call, Throwable t) {
+<span class="nc" id="L160">                            btn.setEnabled(true);</span>
+<span class="nc" id="L161">                            adapter.updateLastBotMessage(&quot;Network error: &quot; + t.getMessage());</span>
+<span class="nc" id="L162">                            scrollToBottom();</span>
+<span class="nc" id="L163">                        }</span>
+                    });
+        }
+<span class="fc" id="L166">    }</span>
+
+    /**
+     * Scrolls the RecyclerView to the most recent chat message.
+     */
+    private void scrollToBottom() {
+<span class="fc" id="L172">        rv.post(() -&gt; rv.scrollToPosition(adapter.getItemCount() - 1));</span>
+<span class="fc" id="L173">    }</span>
+    /**
+     * Hides the soft keyboard after the user sends a message.
+     */
+    private void hideKeyboard() {
+<span class="fc" id="L178">        View v = getCurrentFocus();</span>
+<span class="pc bpc" id="L179" title="1 of 2 branches missed.">        if (v != null) {</span>
+<span class="fc" id="L180">            InputMethodManager imm = (InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);</span>
+<span class="fc" id="L181">            imm.hideSoftInputFromWindow(v.getWindowToken(), 0);</span>
+        }
+<span class="fc" id="L183">    }</span>
+
+    private void loadChatHistoryIfLoggedIn() {
+<span class="fc" id="L186">        SessionManager session = new SessionManager(this);</span>
+
+<span class="pc bpc" id="L188" title="1 of 2 branches missed.">        if (!session.isLoggedIn()) {</span>
+<span class="nc" id="L189">            return;</span>
+        }
+
+<span class="fc" id="L192">        String token = session.getToken();</span>
+
+<span class="pc bpc" id="L194" title="2 of 4 branches missed.">        if (token == null || token.isEmpty()) return;</span>
+
+<span class="pc bpc" id="L196" title="1 of 2 branches missed.">        if (!token.toLowerCase().startsWith(&quot;bearer &quot;)) {</span>
+<span class="fc" id="L197">            token = &quot;Bearer &quot; + token;</span>
+        }
+
+<span class="fc" id="L200">        RetrofitClient.chat().getHistory(token).enqueue(new Callback&lt;List&lt;com.example.frontendproject.net.ChatHistoryItem&gt;&gt;() {</span>
+            @Override
+            public void onResponse(Call&lt;List&lt;com.example.frontendproject.net.ChatHistoryItem&gt;&gt; call,
+                                   Response&lt;List&lt;com.example.frontendproject.net.ChatHistoryItem&gt;&gt; response) {
+
+<span class="pc bpc" id="L205" title="3 of 4 branches missed.">                if (!response.isSuccessful() || response.body() == null) return;</span>
+
+<span class="nc" id="L207">                List&lt;com.example.frontendproject.net.ChatHistoryItem&gt; history = response.body();</span>
+<span class="nc" id="L208">                List&lt;ChatMessage&gt; preload = new ArrayList&lt;&gt;();</span>
+
+                // Convert backend history → UI messages
+<span class="nc bnc" id="L211" title="All 2 branches missed.">                for (com.example.frontendproject.net.ChatHistoryItem h : history) {</span>
+<span class="nc" id="L212">                    preload.add(new ChatMessage(ChatMessage.ROLE_USER, h.userMessage));</span>
+<span class="nc" id="L213">                    preload.add(new ChatMessage(ChatMessage.ROLE_BOT, h.botResponse));</span>
+<span class="nc" id="L214">                }</span>
+
+<span class="nc" id="L216">                adapter.setMessages(preload);</span>
+<span class="nc" id="L217">                scrollToBottom();</span>
+<span class="nc" id="L218">            }</span>
+
+            @Override
+            public void onFailure(Call&lt;List&lt;com.example.frontendproject.net.ChatHistoryItem&gt;&gt; call, Throwable t) {
+
+<span class="nc" id="L223">            }</span>
+        });
+<span class="fc" id="L225">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span>Generated by the Android Gradle plugin 8.13.1</div></body></html>

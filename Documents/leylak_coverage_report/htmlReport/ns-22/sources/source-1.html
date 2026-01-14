@@ -1,0 +1,247 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > DiscussionRepository</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.LiveDiscussion.repository</a>
+</div>
+
+<h1>Coverage Summary for Class: DiscussionRepository (onetoone.LiveDiscussion.repository)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+</tr>
+<tr>
+  <td class="name">DiscussionRepository</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.LiveDiscussion.repository;
+&nbsp;
+&nbsp;import onetoone.LiveDiscussion.model.Discussion;
+&nbsp;import onetoone.LiveDiscussion.model.DiscussionParticipant;
+&nbsp;import onetoone.LiveDiscussion.model.DiscussionMessage;
+&nbsp;import onetoone.LiveDiscussion.model.DiscussionType;
+&nbsp;import org.springframework.data.jpa.repository.JpaRepository;
+&nbsp;import org.springframework.data.jpa.repository.Query;
+&nbsp;import org.springframework.data.repository.query.Param;
+&nbsp;import org.springframework.stereotype.Repository;
+&nbsp;
+&nbsp;import java.time.LocalDateTime;
+&nbsp;import java.util.List;
+&nbsp;import java.util.Optional;
+&nbsp;
+&nbsp;/**
+&nbsp; * Unified repository for all Discussion-related entities
+&nbsp; * Handles Discussion, DiscussionParticipant, and DiscussionMessage queries
+&nbsp; */
+&nbsp;@Repository
+&nbsp;public interface DiscussionRepository extends JpaRepository&lt;Discussion, Long&gt; {
+&nbsp;
+&nbsp;    // ==================== DISCUSSION QUERIES ====================
+&nbsp;
+&nbsp;    // Find discussion by poll ID (one-to-one relationship)
+&nbsp;    @Query(&quot;SELECT d FROM Discussion d WHERE d.poll.id = :pollId&quot;)
+&nbsp;    Optional&lt;Discussion&gt; findByPollId(@Param(&quot;pollId&quot;) Long pollId);
+&nbsp;
+&nbsp;    // Add this new method
+&nbsp;    @Query(&quot;SELECT d FROM Discussion d &quot; +
+&nbsp;            &quot;LEFT JOIN FETCH d.poll &quot; +
+&nbsp;            &quot;LEFT JOIN FETCH d.hostUser &quot; +
+&nbsp;            &quot;WHERE d.id = :discussionId&quot;)
+&nbsp;    Optional&lt;Discussion&gt; findByIdWithDetails(@Param(&quot;discussionId&quot;) Long discussionId);
+&nbsp;
+&nbsp;    // Update existing method
+&nbsp;    @Query(&quot;SELECT dp FROM DiscussionParticipant dp &quot; +
+&nbsp;            &quot;JOIN FETCH dp.user &quot; +
+&nbsp;            &quot;WHERE dp.discussion.id = :discussionId AND dp.leftAt IS NULL&quot;)
+&nbsp;    List&lt;DiscussionParticipant&gt; findActiveParticipantsByDiscussionId(@Param(&quot;discussionId&quot;) Long discussionId);
+&nbsp;
+&nbsp;    // Find discussions by type
+&nbsp;    List&lt;Discussion&gt; findByType(DiscussionType type);
+&nbsp;
+&nbsp;    // Find discussions by active status
+&nbsp;    List&lt;Discussion&gt; findByActive(boolean active);
+&nbsp;
+&nbsp;    // Find by type and active status
+&nbsp;    List&lt;Discussion&gt; findByTypeAndActive(DiscussionType type, boolean active);
+&nbsp;
+&nbsp;    // Find discussions hosted by a specific user
+&nbsp;    @Query(&quot;SELECT d FROM Discussion d WHERE d.hostUser.emailId = :hostEmail&quot;)
+&nbsp;    List&lt;Discussion&gt; findByHostUserEmail(@Param(&quot;hostEmail&quot;) String hostEmail);
+&nbsp;
+&nbsp;    // Search discussions by title or description
+&nbsp;    @Query(&quot;SELECT d FROM Discussion d WHERE LOWER(d.title) LIKE LOWER(CONCAT(&#39;%&#39;, :query, &#39;%&#39;)) &quot; +
+&nbsp;            &quot;OR LOWER(d.description) LIKE LOWER(CONCAT(&#39;%&#39;, :query, &#39;%&#39;))&quot;)
+&nbsp;    List&lt;Discussion&gt; searchDiscussions(@Param(&quot;query&quot;) String query);
+&nbsp;
+&nbsp;    // Find discussions containing a specific tag
+&nbsp;    @Query(&quot;SELECT d FROM Discussion d JOIN d.tags t WHERE t = :tag&quot;)
+&nbsp;    List&lt;Discussion&gt; findByTag(@Param(&quot;tag&quot;) String tag);
+&nbsp;
+&nbsp;    // Find inactive discussions for cleanup
+&nbsp;    @Query(&quot;SELECT d FROM Discussion d WHERE d.active = true AND d.lastActivity &lt; :cutoffDate&quot;)
+&nbsp;    List&lt;Discussion&gt; findInactiveDiscussions(@Param(&quot;cutoffDate&quot;) LocalDateTime cutoffDate);
+&nbsp;
+&nbsp;    // ==================== PARTICIPANT QUERIES ====================
+&nbsp;
+&nbsp;    // Find participant by discussion ID and user email
+&nbsp;    @Query(&quot;SELECT dp FROM DiscussionParticipant dp WHERE dp.discussion.id = :discussionId &quot; +
+&nbsp;            &quot;AND dp.user.emailId = :userEmail AND dp.leftAt IS NULL&quot;)
+&nbsp;    Optional&lt;DiscussionParticipant&gt; findParticipantByDiscussionAndUser(
+&nbsp;            @Param(&quot;discussionId&quot;) Long discussionId,
+&nbsp;            @Param(&quot;userEmail&quot;) String userEmail);
+&nbsp;
+&nbsp;    // Find all participants (including those who left)
+&nbsp;    @Query(&quot;SELECT dp FROM DiscussionParticipant dp WHERE dp.discussion.id = :discussionId&quot;)
+&nbsp;    List&lt;DiscussionParticipant&gt; findAllParticipantsByDiscussionId(@Param(&quot;discussionId&quot;) Long discussionId);
+&nbsp;
+&nbsp;    // Count active participants in a discussion
+&nbsp;    @Query(&quot;SELECT COUNT(dp) FROM DiscussionParticipant dp WHERE dp.discussion.id = :discussionId &quot; +
+&nbsp;            &quot;AND dp.leftAt IS NULL&quot;)
+&nbsp;    long countActiveParticipants(@Param(&quot;discussionId&quot;) Long discussionId);
+&nbsp;
+&nbsp;    // Find all active discussions a user is participating in
+&nbsp;    @Query(&quot;SELECT dp FROM DiscussionParticipant dp WHERE dp.user.emailId = :userEmail &quot; +
+&nbsp;            &quot;AND dp.leftAt IS NULL&quot;)
+&nbsp;    List&lt;DiscussionParticipant&gt; findActiveParticipantsByUserEmail(@Param(&quot;userEmail&quot;) String userEmail);
+&nbsp;
+&nbsp;    // Check if user is host of a discussion
+&nbsp;    @Query(&quot;SELECT dp.isHost FROM DiscussionParticipant dp WHERE dp.discussion.id = :discussionId &quot; +
+&nbsp;            &quot;AND dp.user.emailId = :userEmail AND dp.leftAt IS NULL&quot;)
+&nbsp;    Boolean isUserHostOfDiscussion(@Param(&quot;discussionId&quot;) Long discussionId, @Param(&quot;userEmail&quot;) String userEmail);
+&nbsp;
+&nbsp;    // Find stale online participants (for cleanup)
+&nbsp;    @Query(&quot;SELECT dp FROM DiscussionParticipant dp WHERE dp.isOnline = true &quot; +
+&nbsp;            &quot;AND dp.lastSeen &lt; :threshold&quot;)
+&nbsp;    List&lt;DiscussionParticipant&gt; findStaleOnlineParticipants(@Param(&quot;threshold&quot;) LocalDateTime threshold);
+&nbsp;
+&nbsp;    // Count online participants in a discussion
+&nbsp;    @Query(&quot;SELECT COUNT(dp) FROM DiscussionParticipant dp WHERE dp.discussion.id = :discussionId &quot; +
+&nbsp;            &quot;AND dp.isOnline = true AND dp.leftAt IS NULL&quot;)
+&nbsp;    long countOnlineParticipants(@Param(&quot;discussionId&quot;) Long discussionId);
+&nbsp;
+&nbsp;    // Save a participant
+&nbsp;    @Query(value = &quot;INSERT INTO discussion_participants (discussion_id, user_email, joined_at, &quot; +
+&nbsp;            &quot;left_at, is_host, last_seen, is_online) VALUES (:discussionId, :userEmail, :joinedAt, &quot; +
+&nbsp;            &quot;:leftAt, :isHost, :lastSeen, :isOnline)&quot;, nativeQuery = true)
+&nbsp;    void saveParticipant(@Param(&quot;discussionId&quot;) Long discussionId,
+&nbsp;                         @Param(&quot;userEmail&quot;) String userEmail,
+&nbsp;                         @Param(&quot;joinedAt&quot;) LocalDateTime joinedAt,
+&nbsp;                         @Param(&quot;leftAt&quot;) LocalDateTime leftAt,
+&nbsp;                         @Param(&quot;isHost&quot;) boolean isHost,
+&nbsp;                         @Param(&quot;lastSeen&quot;) LocalDateTime lastSeen,
+&nbsp;                         @Param(&quot;isOnline&quot;) boolean isOnline);
+&nbsp;
+&nbsp;    // Update participant status
+&nbsp;    @Query(&quot;UPDATE DiscussionParticipant dp SET dp.isOnline = :isOnline, dp.lastSeen = :lastSeen &quot; +
+&nbsp;            &quot;WHERE dp.discussion.id = :discussionId AND dp.user.emailId = :userEmail&quot;)
+&nbsp;    void updateParticipantStatus(@Param(&quot;discussionId&quot;) Long discussionId,
+&nbsp;                                 @Param(&quot;userEmail&quot;) String userEmail,
+&nbsp;                                 @Param(&quot;isOnline&quot;) boolean isOnline,
+&nbsp;                                 @Param(&quot;lastSeen&quot;) LocalDateTime lastSeen);
+&nbsp;
+&nbsp;    // ==================== MESSAGE QUERIES ====================
+&nbsp;
+&nbsp;    // Find messages by discussion ID, ordered by timestamp descending
+&nbsp;    @Query(&quot;SELECT m FROM DiscussionMessage m WHERE m.discussion.id = :discussionId &quot; +
+&nbsp;            &quot;ORDER BY m.timestamp DESC&quot;)
+&nbsp;    List&lt;DiscussionMessage&gt; findMessagesByDiscussionId(@Param(&quot;discussionId&quot;) Long discussionId);
+&nbsp;
+&nbsp;    // Find messages before a specific message ID (pagination)
+&nbsp;    @Query(&quot;SELECT m FROM DiscussionMessage m WHERE m.discussion.id = :discussionId &quot; +
+&nbsp;            &quot;AND m.id &lt; :beforeId ORDER BY m.timestamp DESC&quot;)
+&nbsp;    List&lt;DiscussionMessage&gt; findMessagesBeforeId(
+&nbsp;            @Param(&quot;discussionId&quot;) Long discussionId,
+&nbsp;            @Param(&quot;beforeId&quot;) Long beforeId);
+&nbsp;
+&nbsp;    // Find messages after a specific message ID (pagination)
+&nbsp;    @Query(&quot;SELECT m FROM DiscussionMessage m WHERE m.discussion.id = :discussionId &quot; +
+&nbsp;            &quot;AND m.id &gt; :afterId ORDER BY m.timestamp ASC&quot;)
+&nbsp;    List&lt;DiscussionMessage&gt; findMessagesAfterId(
+&nbsp;            @Param(&quot;discussionId&quot;) Long discussionId,
+&nbsp;            @Param(&quot;afterId&quot;) Long afterId);
+&nbsp;
+&nbsp;    // Count total messages in a discussion
+&nbsp;    @Query(&quot;SELECT COUNT(m) FROM DiscussionMessage m WHERE m.discussion.id = :discussionId&quot;)
+&nbsp;    long countMessagesByDiscussionId(@Param(&quot;discussionId&quot;) Long discussionId);
+&nbsp;
+&nbsp;    // Find direct messages between two users in a discussion
+&nbsp;    @Query(&quot;SELECT m FROM DiscussionMessage m WHERE m.discussion.id = :discussionId &quot; +
+&nbsp;            &quot;AND m.messageType = &#39;DIRECT_MESSAGE&#39; &quot; +
+&nbsp;            &quot;AND ((m.sender.emailId = :user1Email AND m.recipientEmail = :user2Email) &quot; +
+&nbsp;            &quot;OR (m.sender.emailId = :user2Email AND m.recipientEmail = :user1Email)) &quot; +
+&nbsp;            &quot;ORDER BY m.timestamp DESC&quot;)
+&nbsp;    List&lt;DiscussionMessage&gt; findDirectMessagesBetween(
+&nbsp;            @Param(&quot;discussionId&quot;) Long discussionId,
+&nbsp;            @Param(&quot;user1Email&quot;) String user1Email,
+&nbsp;            @Param(&quot;user2Email&quot;) String user2Email);
+&nbsp;
+&nbsp;    // Delete all messages in a discussion
+&nbsp;    @Query(&quot;DELETE FROM DiscussionMessage m WHERE m.discussion.id = :discussionId&quot;)
+&nbsp;    void deleteAllMessagesInDiscussion(@Param(&quot;discussionId&quot;) Long discussionId);
+&nbsp;
+&nbsp;    // Save a message (using native query for insert)
+&nbsp;    @Query(value = &quot;INSERT INTO discussion_messages (discussion_id, sender_email, content, &quot; +
+&nbsp;            &quot;message_type, recipient_email, timestamp, edited, edited_at) &quot; +
+&nbsp;            &quot;VALUES (:discussionId, :senderEmail, :content, :messageType, :recipientEmail, &quot; +
+&nbsp;            &quot;:timestamp, :edited, :editedAt)&quot;, nativeQuery = true)
+&nbsp;    void saveMessage(@Param(&quot;discussionId&quot;) Long discussionId,
+&nbsp;                     @Param(&quot;senderEmail&quot;) String senderEmail,
+&nbsp;                     @Param(&quot;content&quot;) String content,
+&nbsp;                     @Param(&quot;messageType&quot;) String messageType,
+&nbsp;                     @Param(&quot;recipientEmail&quot;) String recipientEmail,
+&nbsp;                     @Param(&quot;timestamp&quot;) LocalDateTime timestamp,
+&nbsp;                     @Param(&quot;edited&quot;) boolean edited,
+&nbsp;                     @Param(&quot;editedAt&quot;) LocalDateTime editedAt);
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

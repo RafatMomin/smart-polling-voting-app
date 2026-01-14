@@ -1,0 +1,304 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > Users</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">onetoone.Users.model</a>
+</div>
+
+<h1>Coverage Summary for Class: Users (onetoone.Users.model)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">Users</td>
+<td class="coverageStat">
+  <span class="percent">
+    13.8%
+  </span>
+  <span class="absValue">
+    (4/29)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    23.1%
+  </span>
+  <span class="absValue">
+    (9/39)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">Users$HibernateInstantiator$g2tH8ukG</td>
+  </tr>
+  <tr>
+    <td class="name">Users$HibernateProxy$bvI5NgFF</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    13.8%
+  </span>
+  <span class="absValue">
+    (4/29)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    23.1%
+  </span>
+  <span class="absValue">
+    (9/39)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package onetoone.Users.model;
+&nbsp;
+&nbsp;import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+&nbsp;import jakarta.persistence.*;
+&nbsp;import com.fasterxml.jackson.annotation.JsonIgnore;
+&nbsp;import onetoone.AI.model.ChatMessage;
+&nbsp;import onetoone.Polling.model.PollModerator;
+&nbsp;import onetoone.PollingWindow.model.Group;
+&nbsp;import onetoone.PollingWindow.model.PollingWindow;
+&nbsp;
+&nbsp;import java.util.ArrayList;
+&nbsp;import java.util.HashSet;
+&nbsp;import java.util.List;
+&nbsp;import java.util.Set;
+&nbsp;
+&nbsp;/**
+&nbsp; *
+&nbsp; * @author Rohan Sah
+&nbsp; *
+&nbsp; */
+&nbsp;
+&nbsp;@Entity
+&nbsp;@JsonIgnoreProperties({&quot;hibernateLazyInitializer&quot;, &quot;handler&quot;})
+&nbsp;public class Users {
+&nbsp;
+&nbsp;    @Id
+&nbsp;    private String emailId;
+&nbsp;    private String name;
+&nbsp;    private String password;
+&nbsp;    private boolean isVerified;
+&nbsp;    private String verificationToken;
+&nbsp;    private String resetToken;
+&nbsp;    private String authtoken;
+&nbsp;
+&nbsp;    // One-to-Many relationship with ChatMessages
+<b class="fc">&nbsp;    @OneToMany(mappedBy = &quot;user&quot;, cascade = CascadeType.ALL, orphanRemoval = true)</b>
+&nbsp;    @JsonIgnore
+&nbsp;    private List&lt;ChatMessage&gt; chatMessages = new ArrayList&lt;&gt;();
+&nbsp;
+&nbsp;    // One-to-Many: User can create many groups
+<b class="fc">&nbsp;    @OneToMany(mappedBy = &quot;creator&quot;, cascade = CascadeType.ALL, orphanRemoval = true)</b>
+&nbsp;    @JsonIgnore
+&nbsp;    private Set&lt;Group&gt; createdGroups = new HashSet&lt;&gt;();
+&nbsp;
+&nbsp;    // Many-to-Many: User can be member of many groups
+<b class="fc">&nbsp;    @ManyToMany(mappedBy = &quot;members&quot;)</b>
+&nbsp;    @JsonIgnore
+&nbsp;    private Set&lt;Group&gt; memberOfGroups = new HashSet&lt;&gt;();
+&nbsp;
+&nbsp;    // One-to-Many: User can create many polling windows
+<b class="fc">&nbsp;    @OneToMany(mappedBy = &quot;creator&quot;, cascade = CascadeType.ALL, orphanRemoval = true)</b>
+&nbsp;    @JsonIgnore
+&nbsp;    private Set&lt;PollingWindow&gt; createdPollingWindows = new HashSet&lt;&gt;();
+&nbsp;
+&nbsp;    // Many-to-Many: User can be individually targeted by many polling windows
+<b class="fc">&nbsp;    @ManyToMany(mappedBy = &quot;targetIndividualUsers&quot;)</b>
+&nbsp;    @JsonIgnore
+&nbsp;    private Set&lt;PollingWindow&gt; targetedPollingWindows = new HashSet&lt;&gt;();
+&nbsp;
+&nbsp;    // ONE-TO-MANY relationship: user can be moderator of many polls
+<b class="fc">&nbsp;    @OneToMany(mappedBy = &quot;moderator&quot;, cascade = CascadeType.ALL, orphanRemoval = true)</b>
+&nbsp;    @JsonIgnore
+&nbsp;    private Set&lt;PollModerator&gt; moderatedPolls = new HashSet&lt;&gt;();
+&nbsp;
+&nbsp;    // Constructors
+<b class="nc">&nbsp;    public Users(String name, String emailId, String password) {</b>
+<b class="nc">&nbsp;        this.name = name;</b>
+<b class="nc">&nbsp;        this.emailId = emailId;</b>
+<b class="nc">&nbsp;        this.password = password;</b>
+&nbsp;    }
+&nbsp;
+<b class="fc">&nbsp;    public Users() {</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // Existing getters and setters
+&nbsp;    public String getPassword() {
+<b class="nc">&nbsp;        return password;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setPassword(String password) {
+<b class="nc">&nbsp;        this.password = password;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getName(){
+<b class="nc">&nbsp;        return name;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setName(String name){
+<b class="nc">&nbsp;        this.name = name;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getEmailId(){
+<b class="fc">&nbsp;        return emailId;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setEmailId(String emailId){
+<b class="fc">&nbsp;        this.emailId = emailId;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public boolean isVerified() {
+<b class="nc">&nbsp;        return isVerified;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setVerified(boolean verified) {
+<b class="nc">&nbsp;        isVerified = verified;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getVerificationToken() {
+<b class="nc">&nbsp;        return verificationToken;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setVerificationToken(String verificationToken) {
+<b class="nc">&nbsp;        this.verificationToken = verificationToken;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getResetToken() {
+<b class="nc">&nbsp;        return resetToken;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setResetToken(String resetToken) {
+<b class="nc">&nbsp;        this.resetToken = resetToken;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getAuthtoken() {
+<b class="nc">&nbsp;        return authtoken;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setAuthtoken(String authtoken) {
+<b class="nc">&nbsp;        this.authtoken = authtoken;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ChatMessage relationship getters/setters
+&nbsp;    public List&lt;ChatMessage&gt; getChatMessages() {
+<b class="nc">&nbsp;        return chatMessages;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setChatMessages(List&lt;ChatMessage&gt; chatMessages) {
+<b class="nc">&nbsp;        this.chatMessages = chatMessages;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void addChatMessage(ChatMessage message) {
+<b class="nc">&nbsp;        chatMessages.add(message);</b>
+<b class="nc">&nbsp;        message.setUser(this);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // Group relationship getters/setters
+&nbsp;    public Set&lt;Group&gt; getCreatedGroups() {
+<b class="nc">&nbsp;        return createdGroups;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setCreatedGroups(Set&lt;Group&gt; createdGroups) {
+<b class="nc">&nbsp;        this.createdGroups = createdGroups;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Set&lt;Group&gt; getMemberOfGroups() {
+<b class="nc">&nbsp;        return memberOfGroups;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setMemberOfGroups(Set&lt;Group&gt; memberOfGroups) {
+<b class="nc">&nbsp;        this.memberOfGroups = memberOfGroups;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // PollingWindow relationship getters/setters
+&nbsp;    public Set&lt;PollingWindow&gt; getCreatedPollingWindows() {
+<b class="nc">&nbsp;        return createdPollingWindows;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setCreatedPollingWindows(Set&lt;PollingWindow&gt; createdPollingWindows) {
+<b class="nc">&nbsp;        this.createdPollingWindows = createdPollingWindows;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Set&lt;PollingWindow&gt; getTargetedPollingWindows() {
+<b class="nc">&nbsp;        return targetedPollingWindows;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTargetedPollingWindows(Set&lt;PollingWindow&gt; targetedPollingWindows) {
+<b class="nc">&nbsp;        this.targetedPollingWindows = targetedPollingWindows;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Set&lt;PollModerator&gt; getModeratedPolls() {
+<b class="nc">&nbsp;        return moderatedPolls;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setModeratedPolls(Set&lt;PollModerator&gt; moderatedPolls) {
+<b class="nc">&nbsp;        this.moderatedPolls = moderatedPolls;</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-12-03 23:47</div>
+</div>
+</body>
+</html>

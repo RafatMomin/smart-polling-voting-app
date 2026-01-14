@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">FrontendProject</string>
+    <string name="base_url">http://coms-3090-036.class.las.iastate.edu:8080</string>
+    <string name="users_path">/users</string>
+    <string name="google_maps_key">YOUR_KEY_HERE</string>
+    <string name="open_chatbot">Open Chatbot</string>
+    <string name="delete">Delete</string>
+    <string name="title_activity_dashboard">DashboardActivity</string>
+
+
+</resources>
